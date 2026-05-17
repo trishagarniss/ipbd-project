@@ -1,0 +1,16 @@
+[project]
+name = "ipbd-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "great-expectations>=1.17.2",
+    "ipykernel>=7.2.0",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.9",
+    "pandas>=3.0.3",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+    "seaborn>=0.13.2",
+]

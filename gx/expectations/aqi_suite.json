@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "id": "52d24735-3af6-496e-bf20-9c5703c6dfeb",
+      "kwargs": {
+        "column": "value"
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_not_be_null"
+    },
+    {
+      "id": "f70556fd-5679-4c7d-b843-791af8b1de9c",
+      "kwargs": {
+        "column": "measured_at"
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_not_be_null"
+    },
+    {
+      "id": "d559d07f-5a84-47b2-91b7-415685538ab9",
+      "kwargs": {
+        "column": "value",
+        "max_value": 500.0,
+        "min_value": 0.0
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_be_between"
+    },
+    {
+      "id": "34c12f8c-b974-49ba-8eae-da1be0c3f1e6",
+      "kwargs": {
+        "column": "measured_at",
+        "type_": "str"
+      },
+      "meta": {},
+      "severity": "critical",
+      "type": "expect_column_values_to_be_of_type"
+    }
+  ],
+  "id": "317f7130-8dc5-4d32-9aaf-99a5adf29db5",
+  "meta": {
+    "great_expectations_version": "1.17.2"
+  },
+  "name": "aqi_suite",
+  "notes": null
+}
