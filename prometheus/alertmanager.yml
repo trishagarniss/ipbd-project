@@ -1,0 +1,20 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ["alertname", "station"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: "telegram"
+
+receivers:
+  - name: "telegram"
+    telegram_configs:
+      - bot_token: "GANTI_DENGAN_TELEGRAM_BOT_TOKEN"
+        chat_id: GANTI_DENGAN_CHAT_ID
+        message: |
+          🚨 *Alert: {{ .GroupLabels.alertname }}*
+          📍 Stasiun: {{ .GroupLabels.station }}
+          📝 {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+        parse_mode: "Markdown"

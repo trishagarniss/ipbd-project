@@ -1,6 +1,37 @@
+# Environment & secrets
 .env
-data/
+*.key
+*.pem
+
+# Data (jangan commit dataset besar)
+data/raw/
+data/processed/
+mlruns/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Jupyter
 .ipynb_checkpoints/
-mlruns/
+*.ipynb_checkpoints
+
+# Docker volumes (jangan commit)
+postgres_data/
+minio_data/
+grafana_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
