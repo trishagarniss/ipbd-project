@@ -6,6 +6,9 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
     networks:
       - aqi-net
 
@@ -24,6 +27,8 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     networks:
       - aqi-net
 
@@ -62,6 +67,33 @@ services:
     networks:
       - aqi-net
 
+  prometheus:
+    image: prom/prometheus:v2.49.0
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/rules:/etc/prometheus/rules
+    networks:
+      - aqi-net
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - aqi-net
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - aqi-net
+
 networks:
   aqi-net:
     driver: bridge
@@ -69,3 +101,7 @@ networks:
 volumes:
   postgres_data:
   minio_data:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
+  grafana_data:
