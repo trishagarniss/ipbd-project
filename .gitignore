@@ -3,7 +3,7 @@
 *.key
 *.pem
 
-# Data (jangan commit dataset besar)
+# Data
 data/raw/
 data/processed/
 mlruns/
