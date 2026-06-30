@@ -1,0 +1,31 @@
+# config/api_settings.yaml
+# Pusat konfigurasi endpoint API — jangan taruh API key di sini, itu di .env
+
+openaq:
+  base_url: "https://api.openaq.org/v3"
+  endpoints:
+    locations: "/locations"
+    location_latest: "/locations/{locations_id}/latest"
+  parameters_of_interest:
+    - pm25
+    - pm10
+    - co
+    - no2
+    - so2
+    - o3
+  poll_interval_seconds: 60
+
+open_meteo:
+  base_url: "https://api.open-meteo.com/v1"
+  endpoints:
+    forecast: "/forecast"
+  parameters_of_interest:
+    - temperature_2m
+    - relative_humidity_2m
+    - wind_speed_10m
+  poll_interval_seconds: 60
+
+kafka:
+  bootstrap_servers: "localhost:9092"
+  topic_raw: "air-quality-raw"
+  topic_processed: "air-quality-processed"

@@ -43,7 +43,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./setup.sql:/docker-entrypoint-initdb.d/setup.sql
+      - ./sql/setup.sql:/docker-entrypoint-initdb.d/setup.sql
     networks:
       - aqi-net
     healthcheck:

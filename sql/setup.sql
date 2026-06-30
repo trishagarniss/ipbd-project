@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS raw_measurements (
     o3          FLOAT,
     temperature FLOAT,
     humidity    FLOAT,
-    source      VARCHAR(20)   DEFAULT 'stream',
+    wind_speed  FLOAT,
+    source      VARCHAR(30)   DEFAULT 'openaq+open-meteo',
     created_at  TIMESTAMPTZ   DEFAULT NOW()
 );
 
