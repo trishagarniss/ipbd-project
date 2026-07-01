@@ -27,18 +27,16 @@ RAW_BUCKET       = "raw"
 PROCESSED_BUCKET = "processed"
 
 
-def aqi_category(aqi_value):
-    if aqi_value is None:
+def ispu_category(ispu_val):
+    if ispu_val is None:
         return None
-    if aqi_value <= 20:
+    if ispu_val <= 50:
         return "Baik"
-    if aqi_value <= 40:
+    if ispu_val <= 100:
         return "Sedang"
-    if aqi_value <= 60:
-        return "Kurang Sehat"
-    if aqi_value <= 80:
+    if ispu_val <= 200:
         return "Tidak Sehat"
-    if aqi_value <= 100:
+    if ispu_val <= 300:
         return "Sangat Tidak Sehat"
     return "Berbahaya"
 
@@ -113,8 +111,8 @@ def read_raw_csv(spark: SparkSession, input_files: list[str]):
         StructField("wind_speed",  FloatType(),   True),
         StructField("precipitation", FloatType(), True),
         StructField("cloud_cover",  FloatType(),  True),
-        StructField("european_aqi", FloatType(),  True),
-        StructField("us_aqi",      FloatType(),   True),
+        StructField("ispu",          FloatType(),   True),
+        StructField("ispu_category", StringType(),  True),
     ])
 
     if not input_files:
@@ -187,8 +185,8 @@ def clean_data(df):
 
 
 def calculate_aqi_category(df):
-    aqi_category_udf = F.udf(aqi_category, StringType())
-    df = df.withColumn("aqi_category", aqi_category_udf(F.col("european_aqi")))
+    ispu_category_udf = F.udf(ispu_category, StringType())
+    df = df.withColumn("aqi_category", ispu_category_udf(F.col("ispu")))
     return df
 
 
@@ -202,8 +200,7 @@ def aggregate_daily(df):
         F.round(F.avg("so2"),          2).alias("so2_avg"),
         F.round(F.avg("o3"),           2).alias("o3_avg"),
         # uv_index tidak ada di data CSV, skip
-        F.round(F.avg("european_aqi"), 2).alias("european_aqi"),
-        F.round(F.avg("us_aqi"),       2).alias("us_aqi"),
+        F.round(F.avg("ispu"),  2).alias("ispu"),
         F.round(F.avg("temperature"),  2).alias("temperature_avg"),
         F.round(F.avg("humidity"),     2).alias("humidity_avg"),
         F.round(F.avg("wind_speed"),   2).alias("wind_speed_avg"),

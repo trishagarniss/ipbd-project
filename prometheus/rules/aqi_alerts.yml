@@ -2,30 +2,30 @@ groups:
   - name: aqi_alerts
     interval: 5m
     rules:
-      - alert: AQICritical
-        expr: european_aqi_avg > 80
+      - alert: ISPUCritical
+        expr: ispu_avg > 200
         for: 30m
         labels:
           severity: critical
         annotations:
-          summary: "AQI Kritis di {{ $labels.station_id }}"
+          summary: "ISPU Kritis di {{ $labels.station_id }}"
           description: >
-            European AQI di stasiun {{ $labels.station_id }} mencapai
-            {{ $value | humanize }} — masuk kategori Tidak Sehat / Berbahaya.
+            ISPU di stasiun {{ $labels.station_id }} mencapai
+            {{ $value | humanize }} — kategori Sangat Tidak Sehat / Berbahaya.
 
-      - alert: AQIWarning
-        expr: european_aqi_avg > 60
+      - alert: ISPUWarning
+        expr: ispu_avg > 100
         for: 1h
         labels:
           severity: warning
         annotations:
-          summary: "AQI Warning di {{ $labels.station_id }}"
+          summary: "ISPU Warning di {{ $labels.station_id }}"
           description: >
-            European AQI di stasiun {{ $labels.station_id }} mencapai
-            {{ $value | humanize }} — kategori Kurang Sehat.
+            ISPU di stasiun {{ $labels.station_id }} mencapai
+            {{ $value | humanize }} — kategori Tidak Sehat.
 
       - alert: HighPM25
-        expr: pm25_avg > 50
+        expr: pm25_avg > 55.4
         for: 1h
         labels:
           severity: warning
@@ -33,7 +33,7 @@ groups:
           summary: "PM2.5 Tinggi di {{ $labels.station_id }}"
           description: >
             PM2.5 di stasiun {{ $labels.station_id }} mencapai
-            {{ $value | humanize }} µg/m³.
+            {{ $value | humanize }} µg/m³ (melebihi baku mutu ISPU 24 jam).
 
       - alert: KafkaDown
         expr: up{job="kafka-exporter"} == 0

@@ -60,7 +60,7 @@ def load_recent_data() -> pd.DataFrame:
         SELECT station_id, date,
                pm25_avg, pm10_avg, co_avg,
                no2_avg, so2_avg, o3_avg,
-               european_aqi, us_aqi,
+               ispu,
                temperature_avg, humidity_avg,
                wind_speed_avg, precipitation_sum,
                cloud_cover_avg
@@ -88,7 +88,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
             )
 
     for col, window in [("pm25_avg", 3), ("pm10_avg", 3),
-                         ("european_aqi", 3), ("european_aqi", 7)]:
+                         ("ispu", 3), ("ispu", 7)]:
         feature_df[f"{col}_roll_{window}"] = (
             df.groupby("station_id")[col]
             .transform(lambda g: g.rolling(window, min_periods=1).mean())

@@ -1,13 +1,18 @@
 import os
+import sys
 import json
 import csv
 import io
 import logging
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import requests
 import boto3
 from botocore.config import Config as BotoConfig
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ml"))
+from ispu import compute_ispu
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +82,7 @@ def fetch_hourly_air_quality(lat, lon):
         "hourly": (
             "pm10,pm2_5,carbon_monoxide,"
             "nitrogen_dioxide,sulphur_dioxide,ozone,"
-            "uv_index,european_aqi,us_aqi"
+            "uv_index"
         ),
         "start_date": start_date,
         "end_date": end_date,
@@ -137,8 +142,6 @@ def build_csv_rows(station, aq_data, wx_data):
         "so2": "sulphur_dioxide",
         "o3": "ozone",
         "uv_index": "uv_index",
-        "european_aqi": "european_aqi",
-        "us_aqi": "us_aqi",
     }
 
     wx_keys = {
@@ -168,6 +171,14 @@ def build_csv_rows(station, aq_data, wx_data):
             vals = hourly_wx.get(api_key)
             row[key] = vals[i] if vals and i < len(vals) else ""
 
+        ispu_val, ispu_cat = compute_ispu(
+            pm25=row.get("pm25"), pm10=row.get("pm10"),
+            no2=row.get("no2"),  so2=row.get("so2"),
+            co=row.get("co"),    o3=row.get("o3"),
+        )
+        row["ispu"] = ispu_val if ispu_val is not None else ""
+        row["ispu_category"] = ispu_cat
+
         rows.append(row)
 
     return rows
@@ -181,7 +192,7 @@ def upload_csv_to_minio(s3, station, rows):
     fieldnames = [
         "station_id", "station_name", "region", "latitude", "longitude",
         "tanggal", "pm25", "pm10", "co", "no2", "so2", "o3",
-        "uv_index", "european_aqi", "us_aqi",
+        "uv_index", "ispu", "ispu_category",
         "temperature", "humidity", "wind_speed", "precipitation", "cloud_cover",
     ]
 

@@ -1,10 +1,16 @@
 import json
 import time
 import logging
+import sys
+from pathlib import Path
+
 import requests
 import yaml
 from datetime import datetime, timezone
 from kafka import KafkaProducer
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ml"))
+from ispu import compute_ispu
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +20,7 @@ WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 AQ_PARAMS = (
     "pm10,pm2_5,carbon_monoxide,"
     "nitrogen_dioxide,sulphur_dioxide,ozone,"
-    "uv_index,european_aqi,us_aqi"
+    "uv_index"
 )
 
 WX_PARAMS = (
@@ -80,8 +86,6 @@ def fetch_air_quality(lat, lon):
             "so2": c.get("sulphur_dioxide"),
             "o3": c.get("ozone"),
             "uv_index": c.get("uv_index"),
-            "european_aqi": c.get("european_aqi"),
-            "us_aqi": c.get("us_aqi"),
         }
     except requests.exceptions.Timeout:
         log.warning("Air quality API timeout for (%.4f, %.4f)", lat, lon)
@@ -138,8 +142,7 @@ def validate_payload(payload):
         ("temperature", -50, 60),
         ("humidity", 0, 100),
         ("uv_index", 0, 20),
-        ("european_aqi", 0, 200),
-        ("us_aqi", 0, 600),
+        ("ispu", 0, 500),
         ("cloud_cover", 0, 100),
         ("precipitation_probability", 0, 100),
     ]
@@ -172,7 +175,7 @@ def build_payload(station, aq_data, wx_data):
     if aq_data:
         for key in (
             "pm25", "pm10", "co", "no2", "so2", "o3",
-            "uv_index", "european_aqi", "us_aqi"
+            "uv_index"
         ):
             payload[key] = aq_data.get(key)
 
@@ -184,13 +187,21 @@ def build_payload(station, aq_data, wx_data):
         ):
             payload[key] = wx_data.get(key)
 
+    ispu_val, ispu_cat = compute_ispu(
+        pm25=payload.get("pm25"), pm10=payload.get("pm10"),
+        no2=payload.get("no2"),   so2=payload.get("so2"),
+        co=payload.get("co"),     o3=payload.get("o3"),
+    )
+    payload["ispu"] = ispu_val
+    payload["ispu_category"] = ispu_cat
+
     return payload
 
 
 def format_payload_summary(payload):
     fields = [
         ("PM2.5", payload.get("pm25", "-")),
-        ("AQI", payload.get("european_aqi", "-")),
+        ("ISPU", payload.get("ispu", "-")),
         ("T", payload.get("temperature", "-")),
         ("H", payload.get("humidity", "-")),
         ("Rain", payload.get("precipitation", "-")),

@@ -42,7 +42,7 @@ Dashboard ini dirancang untuk tiga peran utama:
 - **Stat:** Persentase data coverage (24 jam)
 
 ### Row 2: Time Series
-- **Line chart:** European AQI 5 stasiun (7 hari)
+- **Line chart:** ISPU 5 stasiun (7 hari)
 - **Line chart:** PM2.5 + PM10 5 stasiun (24 jam)
 - **Line chart:** Suhu + Kelembaban (7 hari)
 
@@ -60,8 +60,8 @@ Dashboard ini dirancang untuk tiga peran utama:
 
 | Rule | Threshold | Severity | Kanal |
 |------|-----------|----------|-------|
-| AQI Kritis | european_aqi_avg > 80 (30 menit) | critical | Telegram |
-| AQI Warning | european_aqi_avg > 60 (1 jam) | warning | Telegram |
+| ISPU Kritis | ispu_avg > 200 (30 menit) | critical | Telegram |
+| ISPU Warning | ispu_avg > 100 (1 jam) | warning | Telegram |
 | PM2.5 Tinggi | pm25_avg > 50 (1 jam) | warning | Telegram |
 | Kafka Down | up == 0 (2 menit) | critical | Telegram |
 | PostgreSQL Down | up == 0 (2 menit) | critical | Telegram |
@@ -70,5 +70,5 @@ Dashboard ini dirancang untuk tiga peran utama:
 
 - **Data:** Menggunakan Open-Meteo API (model, bukan sensor fisik) — akurasi ±15%
 - **Cakupan:** 5 titik kecamatan — interpolasi linier untuk area antar stasiun
-- **Ground truth:** European AQI dari API — tidak divalidasi dengan ISPU manual
+- **ISPU:** Dihitung dari 6 parameter (PM2.5, PM10, CO, NO2, SO2, O3) sesuai Permen LHK No. 14/2020 minus HC
 - **Prediksi:** Random Forest — confidence 0.85 (baseline, perlu tuning lanjutan)

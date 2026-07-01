@@ -51,7 +51,7 @@ def load_data() -> pd.DataFrame:
     query = """
         SELECT station_id, date, pm25_avg, pm10_avg, co_avg,
                no2_avg, so2_avg, o3_avg,
-               european_aqi, us_aqi, temperature_avg,
+               ispu, temperature_avg,
                humidity_avg, wind_speed_avg, precipitation_sum,
                cloud_cover_avg, aqi_category, record_count
         FROM daily_aqi
@@ -73,7 +73,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
     numeric_cols = [
         "pm25_avg", "pm10_avg", "co_avg", "no2_avg", "so2_avg", "o3_avg",
-        "european_aqi", "us_aqi",
+        "ispu",
         "temperature_avg", "humidity_avg", "wind_speed_avg",
         "precipitation_sum", "cloud_cover_avg",
     ]
@@ -92,7 +92,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
             df[f"{col}_lag_{lag}"] = df.groupby("station_id")[col].shift(lag)
 
     for col, window in [("pm25_avg", 3), ("pm10_avg", 3),
-                         ("european_aqi", 3), ("european_aqi", 7)]:
+                         ("ispu", 3), ("ispu", 7)]:
         df[f"{col}_roll_{window}"] = (
             df.groupby("station_id")[col]
             .transform(lambda g: g.rolling(window, min_periods=1).mean())
@@ -184,7 +184,7 @@ def train_kmeans(df: pd.DataFrame):
     log.info("Training KMeans clustering...")
     cluster_features = [
         "pm25_avg", "pm10_avg", "co_avg", "no2_avg", "so2_avg", "o3_avg",
-        "european_aqi", "temperature_avg", "humidity_avg",
+        "ispu", "temperature_avg", "humidity_avg",
     ]
     station_avg = df.groupby("station_id")[cluster_features].mean().dropna()
 

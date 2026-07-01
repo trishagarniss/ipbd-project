@@ -162,7 +162,7 @@ Open-Meteo API (1 tahun historis)
 PM2.5, PM10, CO, NO2, SO2, O3, UV Index
 
 ### Indeks Kualitas Udara
-European AQI (0–100+), US AQI
+ISPU (0–500)
 
 ### Meteorologi
 Suhu, Kelembaban, Kecepatan Angin, Curah Hujan, Tutupan Awan

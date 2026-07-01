@@ -21,8 +21,8 @@ Data mentah dari Kafka stream (producer → topic `air-quality-raw`).
 | so2              | FLOAT          | SO2 (µg/m³)                               |
 | o3               | FLOAT          | O3 (µg/m³)                                |
 | uv_index         | FLOAT          | UV Index                                  |
-| european_aqi     | FLOAT          | European AQI (ground truth)               |
-| us_aqi           | FLOAT          | US AQI                                    |
+| ispu             | FLOAT          | Indeks Standar Pencemar Udara (ISPU)      |
+| ispu_category    | VARCHAR(20)    | Kategori ISPU (Baik–Berbahaya)            |
 | temperature      | FLOAT          | Suhu (°C)                                 |
 | humidity         | FLOAT          | Kelembaban relatif (%)                    |
 | wind_speed       | FLOAT          | Kecepatan angin (km/h)                    |
@@ -52,8 +52,7 @@ Agregasi window 10 menit (slide 5 menit) dari Spark Structured Streaming.
 | so2_avg           | FLOAT          | Rata-rata SO2                      |
 | o3_avg            | FLOAT          | Rata-rata O3                       |
 | uv_index_avg      | FLOAT          | Rata-rata UV Index                 |
-| european_aqi_avg  | FLOAT          | Rata-rata European AQI             |
-| us_aqi_avg        | FLOAT          | Rata-rata US AQI                   |
+| ispu_avg          | FLOAT          | Rata-rata ISPU                     |
 | temperature_avg   | FLOAT          | Rata-rata suhu                     |
 | humidity_avg      | FLOAT          | Rata-rata kelembaban               |
 | wind_speed_avg    | FLOAT          | Rata-rata kecepatan angin          |
@@ -81,8 +80,7 @@ Agregasi harian dari batch ETL. Sumber data truth untuk ML training.
 | so2_avg           | FLOAT          | Rata-rata SO2                      |
 | o3_avg            | FLOAT          | Rata-rata O3                       |
 | uv_index_avg      | FLOAT          | Rata-rata UV Index                 |
-| european_aqi      | FLOAT          | Rata-rata European AQI             |
-| us_aqi            | FLOAT          | Rata-rata US AQI                   |
+| ispu              | FLOAT          | Rata-rata ISPU                     |
 | temperature_avg   | FLOAT          | Rata-rata suhu                     |
 | humidity_avg      | FLOAT          | Rata-rata kelembaban               |
 | wind_speed_avg    | FLOAT          | Rata-rata kecepatan angin          |

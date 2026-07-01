@@ -55,7 +55,7 @@ Verifikasi:
 
 ```bash
 docker compose exec postgres psql -U aqi_user -d aqi_db -c \
-  "SELECT station_id, date, european_aqi, aqi_category FROM daily_aqi LIMIT 10;"
+  "SELECT station_id, date, ispu, aqi_category FROM daily_aqi LIMIT 10;"
 ```
 
 ### 3c. Training ML Model
@@ -99,7 +99,7 @@ docker compose exec spark-master spark-submit \
 
 ```bash
 docker compose exec postgres psql -U aqi_user -d aqi_db -c \
-  "SELECT station_id, window_start, european_aqi_avg FROM stream_agg ORDER BY window_start DESC LIMIT 10;"
+  "SELECT station_id, window_start, ispu_avg FROM stream_agg ORDER BY window_start DESC LIMIT 10;"
 ```
 
 ## 5. Dashboard Grafana
@@ -109,7 +109,7 @@ docker compose exec postgres psql -U aqi_user -d aqi_db -c \
 3. Host: `postgres:5432`, Database: `aqi_db`, User: `aqi_user`, Password: `aqi_password_123`
 4. Import dashboard dari `grafana/dashboards/`
 5. Buat panel:
-   - **Time series:** European AQI per stasiun (dari `stream_agg`)
+   - **Time series:** ISPU per stasiun (dari `stream_agg`)
    - **Stat:** AQI terkini per stasiun
    - **Bar chart:** Rata-rata harian PM2.5 (dari `daily_aqi`)
    - **Table:** Prediksi terakhir (dari `predictions`)
@@ -119,10 +119,10 @@ docker compose exec postgres psql -U aqi_user -d aqi_db -c \
 
 ### Prometheus
 - Buka http://localhost:9090
-- Query: `european_aqi_avg > 60`
+- Query: `ispu_avg > 100`
 
 ### Alertmanager
-- Notifikasi Telegram otomatis jika AQI > 80 atau PM2.5 > 50
+- Notifikasi Telegram otomatis jika ISPU > 200 atau PM2.5 > 55.4
 
 ## 7. Airflow Scheduling
 
