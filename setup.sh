@@ -18,7 +18,7 @@ fi
 if grep -q "AIRFLOW_FERNET_KEY=CHANGE_ME" .env; then
   echo ""
   echo "Generating Airflow Fernet Key..."
-  FERNET=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+  FERNET=$(uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
   sed -i "s|AIRFLOW_FERNET_KEY=CHANGE_ME|AIRFLOW_FERNET_KEY=$FERNET|g" .env
   echo "Fernet Key berhasil di-generate dan disimpan ke .env"
 fi
@@ -26,7 +26,7 @@ fi
 # 3. Generate config dari template (alertmanager.yml)
 echo ""
 echo "Generating config files from templates..."
-python scripts/generate_configs.py
+uv run python scripts/generate_configs.py
 
 # 4. Pull semua image
 echo ""
