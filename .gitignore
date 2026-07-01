@@ -3,6 +3,9 @@
 *.key
 *.pem
 
+# Generated configs (token dari .env di-embed)
+prometheus/alertmanager.yml
+
 # Data
 data/raw/
 data/processed/
