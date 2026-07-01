@@ -22,6 +22,19 @@ else
 fi
 echo "  Python: $PYTHON"
 
+# Deteksi Docker command (Windows Git Bash butuh docker.exe)
+DOCKER=""
+if command -v docker &>/dev/null; then
+  DOCKER="docker"
+elif command -v docker.exe &>/dev/null; then
+  DOCKER="docker.exe"
+else
+  echo "ERROR: Docker tidak ditemukan."
+  echo "Pastikan Docker Desktop sudah terinstall dan running."
+  exit 1
+fi
+echo "  Docker: $DOCKER"
+
 # 1. Cek .env ada
 if [ ! -f .env ]; then
   echo "ERROR: file .env tidak ditemukan!"
@@ -46,17 +59,17 @@ $PYTHON scripts/generate_configs.py
 # 4. Pull semua image
 echo ""
 echo "Pulling Docker images..."
-docker compose pull
+$DOCKER compose pull
 
 # 5. Jalankan stack
 echo ""
 echo "Menjalankan semua service..."
-docker compose up -d
+$DOCKER compose up -d
 
 # 6. Tunggu PostgreSQL siap
 echo ""
 echo "Menunggu PostgreSQL siap..."
-until docker compose exec -T postgres pg_isready -U aqi_user -d aqi_db > /dev/null 2>&1; do
+until $DOCKER compose exec -T postgres pg_isready -U aqi_user -d aqi_db > /dev/null 2>&1; do
   echo "  PostgreSQL belum siap, tunggu 3 detik..."
   sleep 3
 done
