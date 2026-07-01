@@ -1,0 +1,34 @@
+open_meteo:
+  base_url: "https://api.open-meteo.com/v1"
+  endpoints:
+    forecast: "/forecast"
+  parameters_of_interest:
+    - temperature_2m
+    - relative_humidity_2m
+    - wind_speed_10m
+    - precipitation
+    - precipitation_probability
+    - weather_code
+    - cloud_cover
+  poll_interval_seconds: 60
+
+air_quality:
+  base_url: "https://air-quality-api.open-meteo.com/v1"
+  endpoints:
+    current: "/air-quality"
+  parameters_of_interest:
+    - pm10
+    - pm2_5
+    - carbon_monoxide
+    - nitrogen_dioxide
+    - sulphur_dioxide
+    - ozone
+    - uv_index
+    - european_aqi
+    - us_aqi
+  poll_interval_seconds: 60
+
+kafka:
+  bootstrap_servers: "localhost:9092"
+  topic_raw: "air-quality-raw"
+  topic_processed: "air-quality-processed"

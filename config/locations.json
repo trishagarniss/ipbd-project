@@ -1,0 +1,43 @@
+{
+  "city": "Surakarta",
+  "country": "ID",
+  "stations": [
+    {
+      "id": "SKA1",
+      "name": "Banjarsari",
+      "region": "Banjarsari",
+      "latitude": -7.5433,
+      "longitude": 110.8267
+    },
+    {
+      "id": "SKA2",
+      "name": "Jebres",
+      "region": "Jebres",
+      "latitude": -7.5589,
+      "longitude": 110.8535
+    },
+    {
+      "id": "SKA3",
+      "name": "Laweyan",
+      "region": "Laweyan",
+      "latitude": -7.5725,
+      "longitude": 110.8028
+    },
+    {
+      "id": "SKA4",
+      "name": "Pasar Kliwon",
+      "region": "Pasar Kliwon",
+      "latitude": -7.5742,
+      "longitude": 110.8372
+    },
+    {
+      "id": "SKA5",
+      "name": "Serengan",
+      "region": "Serengan",
+      "latitude": -7.5710,
+      "longitude": 110.8195
+    }
+  ],
+  "search_radius_meters": 5000,
+  "note": "5 stasiun pemantauan kualitas udara Kota Surakarta — mapping kecamatan"
+}
