@@ -53,6 +53,12 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
@@ -121,6 +127,7 @@ services:
     <<: *airflow-common
     container_name: airflow-webserver
     command: webserver
+    restart: unless-stopped
     ports:
       - "8080:8080"
     healthcheck:
@@ -128,6 +135,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -138,6 +146,7 @@ services:
     <<: *airflow-common
     container_name: airflow-scheduler
     command: scheduler
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -225,6 +234,7 @@ services:
   kafka-exporter:
     image: danielqsj/kafka-exporter:latest
     container_name: kafka-exporter
+    restart: unless-stopped
     ports:
       - "9308:9308"
     command:
@@ -232,7 +242,8 @@ services:
     networks:
       - aqi-net
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
 
 networks:
   aqi-net:
