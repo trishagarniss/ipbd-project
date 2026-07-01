@@ -1,10 +1,10 @@
 #!/bin/bash
-# setup.sh — Inisialisasi project AQI Watch Jakarta
+# setup.sh — Inisialisasi project AQI Watch Surakarta
 # Jalankan sekali setelah clone repo: bash setup.sh
 
 set -e
 echo "======================================"
-echo " AQI Watch Jakarta — Setup"
+echo " AQI Watch Surakarta — Setup"
 echo "======================================"
 
 # 1. Cek .env ada
@@ -23,17 +23,22 @@ if grep -q "GANTI_DENGAN_FERNET_KEY" .env; then
   echo "Fernet Key berhasil di-generate dan disimpan ke .env"
 fi
 
-# 3. Pull semua image
+# 3. Generate config dari template (alertmanager.yml)
+echo ""
+echo "Generating config files from templates..."
+python scripts/generate_configs.py
+
+# 4. Pull semua image
 echo ""
 echo "Pulling Docker images..."
 docker compose pull
 
-# 4. Jalankan stack
+# 5. Jalankan stack
 echo ""
 echo "Menjalankan semua service..."
 docker compose up -d
 
-# 5. Tunggu PostgreSQL siap
+# 6. Tunggu PostgreSQL siap
 echo ""
 echo "Menunggu PostgreSQL siap..."
 until docker compose exec -T postgres pg_isready -U aqi_user -d aqi_db > /dev/null 2>&1; do
@@ -42,13 +47,13 @@ until docker compose exec -T postgres pg_isready -U aqi_user -d aqi_db > /dev/nu
 done
 echo "PostgreSQL siap!"
 
-# 6. Tunggu Kafka siap
+# 7. Tunggu Kafka siap
 echo ""
 echo "Menunggu Kafka siap..."
 sleep 15
 echo "Kafka siap!"
 
-# 7. Summary akses
+# 8. Summary akses
 echo ""
 echo "======================================"
 echo " Setup selesai! Akses via browser:"
@@ -57,8 +62,8 @@ echo " Airflow       -> http://localhost:8080"
 echo " Grafana       -> http://localhost:3000"
 echo " MinIO Console -> http://localhost:9001"
 echo " Spark UI      -> http://localhost:8081"
- echo " Prometheus    -> http://localhost:9090"
- echo " MLflow        -> http://localhost:5000"
+echo " Prometheus    -> http://localhost:9090"
+echo " MLflow        -> http://localhost:5000"
 echo ""
 echo " Jalankan API Ingestor (Streaming):"
 echo " cd producer && uv pip install -r requirements.txt && python api_ingestor.py"

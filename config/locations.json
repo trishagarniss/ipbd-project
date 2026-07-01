@@ -4,35 +4,35 @@
   "stations": [
     {
       "id": "SKA1",
-      "name": "Banjarsari",
+      "name": "SKA1 - Banjarsari",
       "region": "Banjarsari",
       "latitude": -7.5433,
       "longitude": 110.8267
     },
     {
       "id": "SKA2",
-      "name": "Jebres",
+      "name": "SKA2 - Jebres",
       "region": "Jebres",
       "latitude": -7.5589,
       "longitude": 110.8535
     },
     {
       "id": "SKA3",
-      "name": "Laweyan",
+      "name": "SKA3 - Laweyan",
       "region": "Laweyan",
       "latitude": -7.5725,
       "longitude": 110.8028
     },
     {
       "id": "SKA4",
-      "name": "Pasar Kliwon",
+      "name": "SKA4 - Pasar Kliwon",
       "region": "Pasar Kliwon",
       "latitude": -7.5742,
       "longitude": 110.8372
     },
     {
       "id": "SKA5",
-      "name": "Serengan",
+      "name": "SKA5 - Serengan",
       "region": "Serengan",
       "latitude": -7.5710,
       "longitude": 110.8195

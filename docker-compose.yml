@@ -9,12 +9,13 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__LOGGING_LEVEL: INFO
     PIP_CONSTRAINT: "https://raw.githubusercontent.com/apache/airflow/constraints-2.7.2/constraints-3.8.txt"
-    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark apache-airflow-providers-telegram"
+    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark apache-airflow-providers-telegram scikit-learn pandas numpy scipy mlflow psycopg2-binary python-dotenv boto3 requests"
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
     - ./spark:/opt/airflow/spark
+    - ./ml:/opt/ml
   networks:
     - aqi-net
   depends_on:
@@ -99,7 +100,7 @@ services:
       - "8081:8080"
       - "7077:7077"
     volumes:
-      - ./spark:/opt/airflow/spark 
+      - ./spark:/opt/airflow/spark
     networks:
       - aqi-net
 
@@ -181,7 +182,8 @@ services:
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-    command: mlflow server --host 0.0.0.0 --port 5000
+    command: >
+      sh -c "pip install psycopg2-binary --quiet && mlflow server --host 0.0.0.0 --port 5000"
     volumes:
       - mlflow_data:/mlflow
     networks:

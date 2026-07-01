@@ -1,98 +1,194 @@
-# AQI Watch Jakarta
+# AQI Watch Surakarta
 
-Sistem prediksi kualitas udara Kota Jakarta berbasis Big Data pipeline on-premise.
-Data mengalir dari sensor simulasi → Kafka → Spark → MinIO + PostgreSQL → ML inference → Grafana dashboard.
+Sistem monitoring dan prediksi kualitas udara **Kota Surakarta** berbasis Big Data pipeline on-premise.
+
+Data mengalir dari **Open-Meteo API** → **Producer** → **Kafka** → **Spark Streaming + Batch** → **MinIO + PostgreSQL** → **ML Training (Random Forest + KMeans)** → **Grafana dashboard** → **Alert Telegram**.
 
 ## Prasyarat
 
-- Docker Desktop (sudah include Docker Compose v2)
-- Python 3.11+
-- Git
-
-## Cara Menjalankan
-
-### 1. Clone repo
-
-```bash
-git clone https://github.com/username/aqi-watch-jakarta.git
-cd aqi-watch-jakarta
-```
-
-### 2. Setup environment
-
-```bash
-cp .env.example .env
-# Edit .env — isi nilai yang masih placeholder (lihat komentar di dalam file)
-```
-
-### 3. Jalankan setup otomatis
-
-```bash
-bash setup.sh
-```
-
-Script ini akan: pull Docker images, jalankan semua service, tunggu hingga siap, lalu tampilkan URL akses.
-
-### 4. Jalankan sensor simulator
-
-```bash
-cd producer
-pip install kafka-python
-python sensor_simulator.py
-```
-
-## Akses Dashboard
-
-| Service        | URL                       | Kredensial         |
-|----------------|---------------------------|-------------------|
-| Grafana        | http://localhost:3000     | admin / admin123  |
-| Airflow        | http://localhost:8080     | admin / admin123  |
-| MLflow         | http://localhost:5000     | -                 |
-| MinIO Console  | http://localhost:9001     | minioadmin / ...  |
-| Spark UI       | http://localhost:8081     | -                 |
-| Prometheus     | http://localhost:9090     | -                 |
+- Docker Desktop (Docker Compose v2)
+- Python 3.14+ dengan `uv`
+- Windows 11 (atau Linux/macOS dengan penyesuaian path)
 
 ## Struktur Folder
 
 ```
-aqi-watch-jakarta/
-├── docker-compose.yml        # Definisi semua service
-├── .env                      # Environment variables (tidak di-commit)
-├── setup.sql                 # Schema PostgreSQL (auto-run saat container naik)
-├── setup.sh                  # Script setup otomatis
-├── producer/
-│   └── sensor_simulator.py  # Simulator 5 stasiun sensor Jakarta
-├── airflow/
-│   └── dags/                # DAG batch ETL harian & retraining ML mingguan
+aqi-watch-surakarta/
+├── docker-compose.yml        # 14 service (ZooKeeper, Kafka, PostgreSQL, MinIO,
+│                             #   Spark master+worker, Airflow, MLflow,
+│                             #   Prometheus+Alertmanager, Postgres+Kafka exporter,
+│                             #   Grafana)
+├── .env                      # Environment variables (KREDENSIAL ASLI — jangan di-share)
+├── .gitignore
+├── setup.sql                 # Schema PostgreSQL (5 tabel)
+├── config/
+│   └── locations.json        # 5 stasiun Surakarta (SKA1–SKA5)
 ├── spark/
-│   ├── batch_etl.py         # Spark batch job (CSV → PostgreSQL)
-│   └── stream_processor.py  # Spark Structured Streaming (Kafka → PostgreSQL)
+│   ├── batch_extract.py      # Python script (API historis 1 tahun → upload MinIO)
+│   ├── batch_etl.py          # Spark batch (MinIO CSV → clean → daily agg → PostgreSQL + Parquet)
+│   └── stream_processor.py   # Spark Structured Streaming (Kafka → windowed agg → PostgreSQL)
+├── airflow/
+│   └── dags/
+│       ├── batch_ingest.py   # DAG ingest harian (extract → ETL) + audit
+│       └── ml_retrain.py     # DAG retrain mingguan + Telegram notif
 ├── ml/
-│   ├── train.py             # Training Random Forest + log ke MLflow
-│   └── inference.py         # Inference helper
-├── grafana/
-│   └── dashboards/          # Dashboard JSON (import ke Grafana)
+│   ├── train.py              # Random Forest + KMeans → MLflow
+│   ├── predict.py            # Load model → batch predict → PostgreSQL
+│   ├── ge_validation.py      # Great Expectations — data quality check
+│   └── requirements.txt      # Dependencies ML
 ├── prometheus/
-│   ├── prometheus.yml       # Konfigurasi scrape
-│   ├── alertmanager.yml     # Konfigurasi alert ke Telegram
-│   └── rules/               # Alert rules YAML
-├── data/
-│   └── raw/                 # Dataset CSV Jakarta (tidak di-commit, download manual)
-├── notebooks/               # Jupyter notebook eksplorasi dataset
-└── docs/                    # Dokumentasi teknis & troubleshooting
+│   ├── prometheus.yml        # Scrape config
+│   ├── alertmanager.yml.tmpl # Template alertmanager → Telegram
+│   ├── generate_configs.py   # Generate alertmanager.yml dari .env
+│   └── rules/aqi_alerts.yml  # 5 alert rules
+├── grafana/
+│   └── dashboards/           # Dashboard JSON (import manual)
+├── docs/
+│   ├── metadata.md           # Metadata 5 tabel database
+│   ├── run-demo.md           # Tutorial demo end-to-end
+│   ├── dashboard.md          # Tujuan & insight dashboard
+│   └── troubleshooting.md    # Common issues & solusi
+├── scripts/
+│   └── generate_configs.py   # Generate konfigurasi dari .env
+└── README.md
 ```
 
-## Menghentikan Semua Service
+## Cara Menjalankan
+
+### 1. Clone & Setup
 
 ```bash
-docker compose down
-# Hapus volume juga (reset total):
-docker compose down -v
+git clone https://github.com/trishagarniss/ipbd-project.git
+cd ipbd-project
 ```
 
-## Tim
+### 2. Environment
 
-| Nama  | Peran                              |
-|-------|------------------------------------|
-| Kamu  | Data Engineering & ML              |
-| Kayla | Serving, Monitoring & Dokumentasi  |
+File `.env` sudah berisi kredensial asli (PostgreSQL, MinIO, Airflow, Grafana, Telegram, OpenAQ). **Jangan commit ke GitHub.**
+
+### 3. Jalankan Infrastruktur
+
+```bash
+docker compose up -d
+```
+
+Tunggu semua service siap (~5 menit). Cek dengan `docker compose ps`. Semua 15 container harus `Up`.
+
+### 4. Pipeline Batch
+
+```bash
+# Extract data historis 1 tahun (dari host)
+uv run python spark/batch_extract.py
+
+# ETL ke daily_aqi (via spark-submit di spark-master)
+docker compose exec spark-master env HOME=/tmp PYTHONPATH=/.local/lib/python3.12/site-packages spark-submit \
+  --packages org.postgresql:postgresql:42.7.1 \
+  --conf spark.sql.ansi.enabled=false \
+  /opt/airflow/spark/batch_etl.py
+```
+
+### 5. ML Training & Predict
+
+```bash
+# Training model (Random Forest + KMeans)
+uv run python ml/train.py
+
+# Batch predict
+uv run python ml/predict.py
+```
+
+### 6. Dashboard
+
+Buka http://localhost:3000 (admin / admin123), add PostgreSQL data source, import dashboard JSON dari `grafana/dashboards/`.
+
+## Akses Service
+
+| Service           | URL                          | Kredensial                |
+|-------------------|------------------------------|---------------------------|
+| Grafana           | http://localhost:3000        | admin / admin123          |
+| Airflow           | http://localhost:8080        | admin / admin123          |
+| MLflow            | http://localhost:5000        | —                         |
+| MinIO Console     | http://localhost:9001        | minioadmin / admin123     |
+| Spark Master UI   | http://localhost:8080        | —                         |
+| Prometheus        | http://localhost:9090        | —                         |
+| Alertmanager      | http://localhost:9093        | —                         |
+
+## Data Flow
+
+```
+Open-Meteo API (1 tahun historis)
+    │
+    ├── batch_extract.py ──► MinIO (raw/ CSV)
+    │                              │
+    │                              ▼
+    │                         batch_etl.py (Spark)
+    │                         clean → daily agg
+    │                              │
+    │                    ┌─────────┴─────────┐
+    │                    ▼                   ▼
+    │              daily_aqi table    MinIO (processed/ Parquet)
+    │                    │
+    │                    ▼
+    │              ML Training (Random Forest + KMeans)
+    │                    │
+    │                    ▼
+    │               MLflow (model registry)
+    │                    │
+    │                    ▼
+    │              predict.py → predictions table
+    │
+    └───► PostgreSQL ◄── Kafka (streaming)
+                │
+                ▼
+         Grafana Dashboard
+         Alert Telegram
+```
+
+## Stasiun Pemantauan
+
+5 stasiun yang mencakup seluruh kecamatan Kota Surakarta:
+
+| ID   | Nama Stasiun          | Kecamatan      | Koordinat            |
+|------|-----------------------|----------------|----------------------|
+| SKA1 | SKA1 - Banjarsari     | Banjarsari     | 7.54°S, 110.83°E     |
+| SKA2 | SKA2 - Jebres         | Jebres         | 7.56°S, 110.85°E     |
+| SKA3 | SKA3 - Laweyan        | Laweyan        | 7.57°S, 110.80°E     |
+| SKA4 | SKA4 - Pasar Kliwon   | Pasar Kliwon   | 7.57°S, 110.84°E     |
+| SKA5 | SKA5 - Serengan       | Serengan       | 7.57°S, 110.82°E     |
+
+## Variabel yang Dimonitor
+
+### Polutan Udara
+PM2.5, PM10, CO, NO2, SO2, O3, UV Index
+
+### Indeks Kualitas Udara
+European AQI (0–100+), US AQI
+
+### Meteorologi
+Suhu, Kelembaban, Kecepatan Angin, Curah Hujan, Tutupan Awan
+
+## Keamanan
+
+### Informasi Sensitif di `.env`
+File `.env` berisi kredensial asli untuk:
+- PostgreSQL (user, password, database)
+- MinIO (access key, secret key)
+- Airflow (user, password)
+- Grafana (user, password)
+- Telegram (bot token, chat ID)
+- OpenAQ (API key)
+
+**Jangan commit `.env` ke GitHub.** File ini sudah masuk `.gitignore`.
+
+### PII (Personally Identifiable Information)
+Proyek ini **tidak mengumpulkan PII**:
+- Data yang di-fetch hanya koordinat stasiun publik dan data meteorologi
+- Tidak ada data pengguna, lokasi personal, atau identitas individu
+- Semua data bersifat anonim dan agregat
+
+Menghentikan Service
+
+```bash
+docker compose down          # Stop semua service
+docker compose down -v       # Stop + hapus volume (data hilang)
+```
