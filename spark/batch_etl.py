@@ -41,7 +41,6 @@ def ispu_category(ispu_val):
 
 
 def _get_minio_bucket(bucket_name: str):
-    endpoint = MINIO_ENDPOINT.replace("http://", "").replace("https://", "")
     use_ssl = MINIO_ENDPOINT.startswith("https")
     client = boto3.client(
         "s3",
@@ -57,7 +56,11 @@ def _get_minio_bucket(bucket_name: str):
         ),
         region_name="us-east-1",
     )
-    client.head_bucket(Bucket=bucket_name)
+    try:
+        client.head_bucket(Bucket=bucket_name)
+    except Exception:
+        client.create_bucket(Bucket=bucket_name)
+        log.info("Bucket '%s' dibuat", bucket_name)
     return client
 
 
@@ -253,11 +256,16 @@ def write_to_minio(spark: SparkSession, df, tmp_dir: str):
     s3 = _get_minio_bucket(PROCESSED_BUCKET)
     for root, _dirs, files in os.walk(local_out):
         for fname in files:
+            if fname.endswith(".crc"):
+                continue
             local_path = os.path.join(root, fname)
             rel_path = os.path.relpath(local_path, local_out)
             s3_key = f"daily_aqi/{rel_path.replace(os.sep, '/')}"
-            s3.upload_file(local_path, PROCESSED_BUCKET, s3_key)
-            log.debug("Uploaded %s -> s3://%s/%s", local_path, PROCESSED_BUCKET, s3_key)
+            try:
+                s3.upload_file(local_path, PROCESSED_BUCKET, s3_key)
+                log.debug("Uploaded %s -> s3://%s/%s", local_path, PROCESSED_BUCKET, s3_key)
+            except Exception as e:
+                log.warning("Upload warning %s: %s", s3_key, e)
     log.info("Berhasil upload daily_aqi ke MinIO")
 
 
@@ -267,8 +275,9 @@ def main():
         format="%(asctime)s [%(levelname)s] batch_etl - %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S"
     )
+    logging.getLogger("urllib3").setLevel(logging.ERROR)
     date_str = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y-%m-%d")
-    log.info("Batch ETL mulai...", date_str)
+    log.info("Batch ETL mulai...")
 
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
@@ -287,7 +296,7 @@ def main():
         write_to_postgres(df_daily, "daily_aqi")
         write_to_minio(spark, df_daily, tmp_dir)
 
-        log.info("Batch ETL selesai.", date_str)
+        log.info("Batch ETL selesai.")
 
 
 if __name__ == "__main__":
