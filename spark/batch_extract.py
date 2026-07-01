@@ -141,7 +141,6 @@ def build_csv_rows(station, aq_data, wx_data):
         "no2": "nitrogen_dioxide",
         "so2": "sulphur_dioxide",
         "o3": "ozone",
-        "uv_index": "uv_index",
     }
 
     wx_keys = {
@@ -192,7 +191,7 @@ def upload_csv_to_minio(s3, station, rows):
     fieldnames = [
         "station_id", "station_name", "region", "latitude", "longitude",
         "tanggal", "pm25", "pm10", "co", "no2", "so2", "o3",
-        "uv_index", "ispu", "ispu_category",
+        "ispu", "ispu_category",
         "temperature", "humidity", "wind_speed", "precipitation", "cloud_cover",
     ]
 
