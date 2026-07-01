@@ -14,9 +14,6 @@ from ispu import compute_ispu
 
 log = logging.getLogger(__name__)
 
-AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
-WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
-
 AQ_PARAMS = (
     "pm10,pm2_5,carbon_monoxide,"
     "nitrogen_dioxide,sulphur_dioxide,ozone,"
@@ -61,7 +58,7 @@ def create_kafka_producer(settings):
         return None
 
 
-def fetch_air_quality(lat, lon):
+def fetch_air_quality(lat, lon, base_url):
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -69,7 +66,7 @@ def fetch_air_quality(lat, lon):
         "timezone": "auto"
     }
     try:
-        resp = requests.get(AIR_QUALITY_URL, params=params, timeout=10)
+        resp = requests.get(base_url, params=params, timeout=10)
         if resp.status_code != 200:
             log.warning(
                 "Air quality API returned %d for (%.4f, %.4f)",
@@ -95,7 +92,7 @@ def fetch_air_quality(lat, lon):
         return None
 
 
-def fetch_weather(lat, lon):
+def fetch_weather(lat, lon, base_url):
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -103,7 +100,7 @@ def fetch_weather(lat, lon):
         "timezone": "auto"
     }
     try:
-        resp = requests.get(WEATHER_URL, params=params, timeout=10)
+        resp = requests.get(base_url, params=params, timeout=10)
         if resp.status_code != 200:
             log.warning(
                 "Weather API returned %d for (%.4f, %.4f)",
@@ -234,13 +231,16 @@ def main():
         cycle += 1
         log.info("--- Cycle %d ---", cycle)
 
+        aq_url = settings["air_quality"]["base_url"] + settings["air_quality"]["endpoints"]["current"]
+        wx_url = settings["open_meteo"]["base_url"] + settings["open_meteo"]["endpoints"]["forecast"]
+
         for station in locations:
             try:
                 aq_data = fetch_air_quality(
-                    station["latitude"], station["longitude"]
+                    station["latitude"], station["longitude"], aq_url
                 )
                 wx_data = fetch_weather(
-                    station["latitude"], station["longitude"]
+                    station["latitude"], station["longitude"], wx_url
                 )
 
                 payload = build_payload(station, aq_data, wx_data)

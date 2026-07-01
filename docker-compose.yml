@@ -11,7 +11,8 @@ x-airflow-common:
     PIP_CONSTRAINT: "https://raw.githubusercontent.com/apache/airflow/constraints-2.7.2/constraints-3.8.txt"
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
-    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark apache-airflow-providers-telegram scikit-learn pandas numpy scipy mlflow psycopg2-binary python-dotenv boto3 requests"
+    AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark apache-airflow-providers-telegram scikit-learn pandas numpy scipy mlflow psycopg2-binary python-dotenv boto3 requests pyspark"
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs

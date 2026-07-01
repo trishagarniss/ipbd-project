@@ -25,6 +25,9 @@ build/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
+# Airflow runtime logs
+airflow/logs/
+
 # Docker volumes (jangan commit)
 postgres_data/
 minio_data/

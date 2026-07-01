@@ -14,93 +14,105 @@ Data mengalir dari **Open-Meteo API** → **Producer** → **Kafka** → **Spark
 
 ```
 aqi-watch-surakarta/
-├── docker-compose.yml        # 14 service (ZooKeeper, Kafka, PostgreSQL, MinIO,
-│                             #   Spark master+worker, Airflow, MLflow,
-│                             #   Prometheus+Alertmanager, Postgres+Kafka exporter,
-│                             #   Grafana)
-├── .env                      # Environment variables (KREDENSIAL ASLI — jangan di-share)
+├── docker-compose.yml        # 15 service (infrastruktur penuh)
+├── .env                      # Kredensial — jangan di-share
 ├── .gitignore
+├── run_pipeline.sh           # E2E pipeline script
 ├── sql/
 │   └── setup.sql             # Schema PostgreSQL (5 tabel)
 ├── config/
-│   └── locations.json        # 5 stasiun Surakarta (SKA1–SKA5)
+│   ├── locations.json        # 5 stasiun Surakarta (SKA1–SKA5)
+│   └── api_settings.yaml     # Konfigurasi API & Kafka
 ├── spark/
-│   ├── batch_extract.py      # Python script (API historis 1 tahun → upload MinIO)
-│   ├── batch_etl.py          # Spark batch (MinIO CSV → clean → daily agg → PostgreSQL + Parquet)
-│   └── stream_processor.py   # Spark Structured Streaming (Kafka → windowed agg → PostgreSQL)
+│   ├── batch_extract.py      # API historis 1 tahun → MinIO
+│   ├── batch_etl.py          # Spark batch → clean → agg → PostgreSQL
+│   ├── stream_processor.py   # Spark Streaming → windowed agg
+│   └── submit_streaming.sh   # Script submit streaming job
+├── producer/
+│   └── api_ingestor.py       # API → Kafka (streaming real-time)
 ├── airflow/
 │   └── dags/
-│       ├── batch_ingest.py   # DAG ingest harian (extract → ETL) + audit
-│       └── ml_retrain.py     # DAG retrain mingguan + Telegram notif
+│       ├── batch_ingest.py   # DAG harian (extract → ETL) + audit
+│       └── ml_retrain.py     # DAG mingguan + Telegram notif
 ├── ml/
+│   ├── ispu.py               # Perhitungan ISPU (Permen LHK No.14/2020)
 │   ├── train.py              # Random Forest + KMeans → MLflow
-│   ├── predict.py            # Load model → batch predict → PostgreSQL
-│   ├── validation.py         # Data quality check (custom SQL)
-│   └── requirements.txt      # Dependencies ML
-├── prometheus/
-│   ├── prometheus.yml        # Scrape config
-│   ├── alertmanager.yml.tmpl # Template alertmanager → Telegram
-│   └── rules/aqi_alerts.yml  # 5 alert rules
-├── grafana/
-│   ├── datasources/          # Auto-provisioning: koneksi PostgreSQL
-│   └── dashboards/           # Auto-provisioning: dashboard ISPU
-├── docs/
-│   ├── metadata.md           # Metadata 5 tabel database
-│   ├── run-demo.md           # Tutorial demo end-to-end
-│   ├── dashboard.md          # Tujuan & insight dashboard
-│   └── troubleshooting.md    # Common issues & solusi
+│   ├── predict.py            # Load model → batch predict
+│   ├── validation.py         # Data quality check
+│   └── requirements.txt
 ├── scripts/
 │   └── generate_configs.py   # Generate konfigurasi dari .env
-└── README.md
+├── prometheus/
+│   ├── prometheus.yml        # Scrape config
+│   ├── alertmanager.yml.tmpl # Template Telegram alert
+│   └── rules/aqi_alerts.yml  # 5 alert rules
+├── grafana/
+│   ├── datasources/          # Auto-provisioning PostgreSQL
+│   └── dashboards/           # Auto-provisioning dashboard ISPU
+└── docs/
+    ├── metadata.md           # Metadata 5 tabel database
+    ├── run-demo.md           # Tutorial demo end-to-end
+    ├── dashboard.md          # Tujuan & insight dashboard
+    └── troubleshooting.md    # Common issues
 ```
 
 ## Cara Menjalankan
 
-### 1. Clone & Setup
+### 1. Environment
 
 ```bash
-git clone https://github.com/trishagarniss/ipbd-project.git
-cd ipbd-project
+cp .env.example .env
+# Isi kredensial di .env (Telegram token, dll)
 ```
 
-### 2. Environment
-
-File `.env` sudah berisi kredensial asli (PostgreSQL, MinIO, Airflow, Grafana, Telegram, OpenAQ). **Jangan commit ke GitHub.**
-
-### 3. Jalankan Infrastruktur
+### 2. Full Pipeline (Otomatis)
 
 ```bash
+bash run_pipeline.sh
+```
+
+Atau step-by-step:
+
+```bash
+# Start infrastruktur
 docker compose up -d
-```
 
-Tunggu semua service siap (~5 menit). Cek dengan `docker compose ps`. Semua 15 container harus `Up`.
-
-### 4. Pipeline Batch
-
-```bash
-# Extract data historis 1 tahun (dari host)
+# Extract data historis 1 tahun
 uv run python spark/batch_extract.py
 
-# ETL ke daily_aqi (via spark-submit di spark-master)
-docker compose exec spark-master env HOME=/tmp PYTHONPATH=/.local/lib/python3.12/site-packages spark-submit \
-  --packages org.postgresql:postgresql:42.7.1 \
+# ETL ke daily_aqi (Spark)
+docker compose exec spark-master env HOME=/tmp \
+  PYTHONPATH=/.local/lib/python3.12/site-packages \
+  spark-submit --packages org.postgresql:postgresql:42.7.1 \
   --conf spark.sql.ansi.enabled=false \
   /opt/airflow/spark/batch_etl.py
-```
 
-### 5. ML Training & Predict
-
-```bash
-# Training model (Random Forest + KMeans)
+# ML Training + Predict
 uv run python ml/train.py
-
-# Batch predict
 uv run python ml/predict.py
 ```
 
-### 6. Dashboard
+### 3. Streaming (Real-time)
 
-Buka http://localhost:3000 (admin / admin123), add PostgreSQL data source, import dashboard JSON dari `grafana/dashboards/`.
+Terminal 1 — API ingestor ke Kafka:
+```bash
+uv run python producer/api_ingestor.py
+```
+
+Terminal 2 — Spark streaming processor:
+```bash
+bash spark/submit_streaming.sh
+```
+
+### 4. Dashboard
+
+- Grafana: http://localhost:3000 (admin / admin123)
+- Dashboard ISPU auto-provisioning dari `grafana/dashboards/`
+
+### 5. Scheduling (Airflow)
+
+DAG `batch_ingest` jalan setiap hari 06:30 WIB.
+DAG `ml_retrain` jalan setiap Senin 08:00 WIB + notif Telegram.
 
 ## Akses Service
 
@@ -160,10 +172,10 @@ Open-Meteo API (1 tahun historis)
 ## Variabel yang Dimonitor
 
 ### Polutan Udara
-PM2.5, PM10, CO, NO2, SO2, O3, UV Index
+PM2.5, PM10, CO, NO2, SO2, O3
 
 ### Indeks Kualitas Udara
-ISPU (0–500)
+ISPU (0–500) — 6 parameter, standar Indonesia Permen LHK No.14/2020
 
 ### Meteorologi
 Suhu, Kelembaban, Kecepatan Angin, Curah Hujan, Tutupan Awan
@@ -172,12 +184,11 @@ Suhu, Kelembaban, Kecepatan Angin, Curah Hujan, Tutupan Awan
 
 ### Informasi Sensitif di `.env`
 File `.env` berisi kredensial asli untuk:
-- PostgreSQL (user, password, database)
+- PostgreSQL (user, password)
 - MinIO (access key, secret key)
-- Airflow (user, password)
+- Airflow (user, password, Fernet key)
 - Grafana (user, password)
 - Telegram (bot token, chat ID)
-- OpenAQ (API key)
 
 **Jangan commit `.env` ke GitHub.** File ini sudah masuk `.gitignore`.
 
@@ -187,7 +198,7 @@ Proyek ini **tidak mengumpulkan PII**:
 - Tidak ada data pengguna, lokasi personal, atau identitas individu
 - Semua data bersifat anonim dan agregat
 
-Menghentikan Service
+### Menghentikan Service
 
 ```bash
 docker compose down          # Stop semua service

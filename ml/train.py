@@ -55,10 +55,11 @@ def load_data() -> pd.DataFrame:
                humidity_avg, wind_speed_avg, precipitation_sum,
                cloud_cover_avg, aqi_category, record_count
         FROM daily_aqi
-        WHERE date >= CURRENT_DATE - INTERVAL '%d days'
+        WHERE date >= CURRENT_DATE - INTERVAL %s
         ORDER BY station_id, date
-    """ % (TRAIN_DAYS + TEST_DAYS)
-    df = pd.read_sql(query, conn)
+    """
+    days = TRAIN_DAYS + TEST_DAYS
+    df = pd.read_sql(query, conn, params=(f"{days} days",))
     conn.close()
     log.info("Loaded %d rows from daily_aqi", len(df))
     return df

@@ -7,8 +7,8 @@ import time
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 log = logging.getLogger(__name__)
 
@@ -102,15 +102,20 @@ def _run_batch_extract(**context):
     log.info("batch_extract selesai dalam %.2f detik.", elapsed)
 
 
-SUBMIT_ETL = (
-    "if command -v spark-submit &>/dev/null; then "
-    "  spark-submit --master spark://spark-master:7077 "
-    "    --jars /opt/spark/jars/postgresql-42.7.1.jar "
-    f"    {SPARK_DIR}/batch_etl.py "
-    "else "
-    "  echo 'WARN: spark-submit tidak tersedia — jalankan manual via spark-master'; "
-    "fi"
-)
+def _run_etl(**context):
+    task = SparkSubmitOperator(
+        task_id="batch_etl_inner",
+        application=f"{SPARK_DIR}/batch_etl.py",
+        conn_id="spark_default",
+        conf={
+            "spark.sql.ansi.enabled": "false",
+            "spark.sql.shuffle.partitions": "4",
+        },
+        packages="org.postgresql:postgresql:42.7.1",
+        executor_memory="1g",
+        driver_memory="512m",
+    )
+    task.execute(context)
 
 
 with DAG(
@@ -136,9 +141,10 @@ with DAG(
         provide_context=True,
     )
 
-    etl = BashOperator(
+    etl = PythonOperator(
         task_id="batch_etl",
-        bash_command=SUBMIT_ETL,
+        python_callable=_run_etl,
+        provide_context=True,
     )
 
     audit_success = PythonOperator(
