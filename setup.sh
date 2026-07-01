@@ -22,7 +22,7 @@ else
 fi
 echo "  Python: $PYTHON"
 
-# Deteksi Docker command (Windows Git Bash butuh docker.exe, WSL stub doang gak cukup)
+# Deteksi Docker command
 DOCKER=""
 if command -v docker.exe &>/dev/null; then
   DOCKER="docker.exe"
@@ -63,12 +63,12 @@ $PYTHON scripts/generate_configs.py
 # 4. Pull semua image
 echo ""
 echo "Pulling Docker images..."
-$DOCKER compose pull
+$DOCKER compose pull </dev/null
 
 # 5. Jalankan stack
 echo ""
 echo "Menjalankan semua service..."
-$DOCKER compose up -d
+$DOCKER compose up -d </dev/null
 
 # 6. Tunggu PostgreSQL siap
 echo ""
@@ -87,9 +87,9 @@ echo "Kafka siap!"
 
 # 8. Summary akses
 echo ""
-echo "======================================"
-echo " Setup selesai! Akses via browser:"
-echo "======================================"
+echo "========================================"
+echo " Setup selesai! Akses via browser"
+echo "========================================"
 echo " Airflow       -> http://localhost:8080"
 echo " Grafana       -> http://localhost:3000"
 echo " MinIO Console -> http://localhost:9001"
@@ -99,4 +99,4 @@ echo " MLflow        -> http://localhost:5000"
 echo ""
 echo " Jalankan API Ingestor (Streaming):"
 echo " cd producer && uv pip install -r requirements.txt && $PYTHON api_ingestor.py"
-echo "======================================"
+echo "========================================"
