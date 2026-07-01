@@ -20,7 +20,8 @@ aqi-watch-surakarta/
 │                             #   Grafana)
 ├── .env                      # Environment variables (KREDENSIAL ASLI — jangan di-share)
 ├── .gitignore
-├── setup.sql                 # Schema PostgreSQL (5 tabel)
+├── sql/
+│   └── setup.sql             # Schema PostgreSQL (5 tabel)
 ├── config/
 │   └── locations.json        # 5 stasiun Surakarta (SKA1–SKA5)
 ├── spark/
@@ -39,7 +40,6 @@ aqi-watch-surakarta/
 ├── prometheus/
 │   ├── prometheus.yml        # Scrape config
 │   ├── alertmanager.yml.tmpl # Template alertmanager → Telegram
-│   ├── generate_configs.py   # Generate alertmanager.yml dari .env
 │   └── rules/aqi_alerts.yml  # 5 alert rules
 ├── grafana/
 │   ├── datasources/          # Auto-provisioning: koneksi PostgreSQL
@@ -110,7 +110,7 @@ Buka http://localhost:3000 (admin / admin123), add PostgreSQL data source, impor
 | Airflow           | http://localhost:8080        | admin / admin123          |
 | MLflow            | http://localhost:5000        | —                         |
 | MinIO Console     | http://localhost:9001        | minioadmin / admin123     |
-| Spark Master UI   | http://localhost:8080        | —                         |
+| Spark Master UI   | http://localhost:8081        | —                         |
 | Prometheus        | http://localhost:9090        | —                         |
 | Alertmanager      | http://localhost:9093        | —                         |
 

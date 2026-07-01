@@ -33,7 +33,7 @@ docker compose exec postgres psql -U aqi_user -d aqi_db -c "\dt"
 # Jalankan batch_extract — fetch 30 hari data historis Open-Meteo
 docker compose exec spark-master spark-submit \
   --master spark://spark-master:7077 \
-  /opt/spark/scripts/batch_extract.py
+  /opt/airflow/spark/batch_extract.py
 ```
 
 Verifikasi file terupload:
@@ -48,7 +48,7 @@ docker compose exec minio mc ls minio/raw/
 docker compose exec spark-master spark-submit \
   --master spark://spark-master:7077 \
   --jars /opt/spark/jars/postgresql-42.7.1.jar \
-  /opt/spark/scripts/batch_etl.py
+  /opt/airflow/spark/batch_etl.py
 ```
 
 Verifikasi:
@@ -92,7 +92,7 @@ docker compose exec spark-master spark-submit \
     org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,\
     org.apache.hadoop:hadoop-aws:3.3.4,\
     org.postgresql:postgresql:42.7.1 \
-  /opt/spark/scripts/stream_processor.py
+  /opt/airflow/spark/stream_processor.py
 ```
 
 ### 4c. Verifikasi Streaming

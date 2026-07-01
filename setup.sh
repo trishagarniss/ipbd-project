@@ -15,11 +15,11 @@ if [ ! -f .env ]; then
 fi
 
 # 2. Generate Airflow Fernet Key kalau belum diisi
-if grep -q "GANTI_DENGAN_FERNET_KEY" .env; then
+if grep -q "AIRFLOW_FERNET_KEY=CHANGE_ME" .env; then
   echo ""
   echo "Generating Airflow Fernet Key..."
   FERNET=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-  sed -i "s|GANTI_DENGAN_FERNET_KEY_HASIL_GENERATE|$FERNET|g" .env
+  sed -i "s|AIRFLOW_FERNET_KEY=CHANGE_ME|AIRFLOW_FERNET_KEY=$FERNET|g" .env
   echo "Fernet Key berhasil di-generate dan disimpan ke .env"
 fi
 

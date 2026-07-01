@@ -1,12 +1,11 @@
 import os
 import sys
-import json
 import tempfile
 import logging
 from datetime import datetime
-from pathlib import Path
 
 import boto3
+from botocore.config import Config
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
@@ -51,7 +50,7 @@ def _get_minio_bucket(bucket_name: str):
         aws_secret_access_key=MINIO_SECRET_KEY,
         use_ssl=use_ssl,
         verify=False,
-        config=boto3.session.Config(
+        config=Config(
             signature_version="s3v4",
             s3={"addressing_style": "path"},
             retries={"max_attempts": 3, "mode": "standard"},

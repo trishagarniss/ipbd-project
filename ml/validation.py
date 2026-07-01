@@ -122,8 +122,8 @@ def main():
             row_count = validate_table(conn, table)
             if row_count > 0:
                 validate_ranges(conn, table)
-                if "date" in [table, "daily_aqi", "stream_agg"]:
-                    pass
+                if table in ["daily_aqi", "stream_agg"]:
+                    validate_recent_data(conn, table)
             else:
                 log.info("  (tabel kosong, skip range check)")
         except Exception as e:

@@ -1,23 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_POSTGRES",
-      "label": "PostgreSQL",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "postgres",
-      "pluginName": "PostgreSQL"
-    }
-  ],
-  "__requires": [
-    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
-    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
-    { "type": "panel", "id": "barchart", "name": "Bar chart", "version": "" },
-    { "type": "panel", "id": "heatmap", "name": "Heatmap", "version": "" },
-    { "type": "panel", "id": "table", "name": "Table", "version": "" },
-    { "type": "panel", "id": "geomap", "name": "Geomap", "version": "" },
-    { "type": "datasource", "id": "postgres", "name": "PostgreSQL", "version": "5.0.0" }
-  ],
   "title": "Air Quality Surakarta — ISPU Dashboard",
   "uid": "air-quality-surakarta",
   "tags": ["aqi", "surakarta", "ispu", "air-quality"],
@@ -35,7 +16,7 @@
       {
         "name": "station",
         "type": "query",
-        "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+        "datasource": { "type": "postgres", "uid": "postgres" },
         "query": "SELECT DISTINCT station_id FROM daily_aqi ORDER BY station_id",
         "refresh": 1,
         "includeAll": true,
@@ -65,7 +46,7 @@
       "title": "Rata-rata ISPU Hari Ini",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "colorMode": "thresholds",
         "graphMode": "area",
@@ -105,7 +86,7 @@
       "title": "Stasiun ISPU Terburuk",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "colorMode": "background",
         "graphMode": "none",
@@ -140,7 +121,7 @@
       "title": "Stasiun Tidak Sehat (ISPU > 100)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -174,7 +155,7 @@
       "title": "Cakupan Data (24 jam)",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -218,7 +199,7 @@
       "title": "ISPU 5 Stasiun — 7 Hari Terakhir",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "legend": { "calcs": ["mean", "max", "min"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
@@ -252,7 +233,7 @@
       "title": "PM2.5 & PM10 — 24 Jam Terakhir",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "legend": { "calcs": ["mean", "max", "min"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
@@ -276,7 +257,7 @@
       "title": "Suhu & Kelembaban — 7 Hari",
       "type": "timeseries",
       "gridPos": { "h": 7, "w": 24, "x": 0, "y": 14 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "legend": { "calcs": ["mean", "max", "min"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
@@ -305,7 +286,7 @@
       "title": "Rata-rata Harian PM2.5 per Stasiun",
       "type": "barchart",
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "orientation": "auto",
         "groupWidth": 0.7,
@@ -332,7 +313,7 @@
       "title": "Distribusi Kategori ISPU (Stacked)",
       "type": "barchart",
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "orientation": "auto",
         "groupWidth": 0.7,
@@ -359,7 +340,7 @@
       "title": "Heatmap ISPU — Jam × Hari (7 hari)",
       "type": "heatmap",
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "calculate": false,
         "calculation": { "xBuckets": { "mode": "size", "scale": { "type": "linear" }, "value": "1h" }, "yBuckets": { "mode": "size", "scale": { "type": "linear" }, "value": "10" } },
@@ -395,7 +376,7 @@
       "title": "Prediksi vs Aktual ISPU",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "legend": { "calcs": ["mean", "last"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
@@ -418,7 +399,7 @@
       "title": "Prediksi Terbaru",
       "type": "table",
       "gridPos": { "h": 8, "w": 6, "x": 12, "y": 31 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "showHeader": true,
         "sortBy": [{ "displayName": "window_start", "desc": true }]
@@ -441,7 +422,7 @@
       "title": "Peta ISPU Surakarta",
       "type": "geomap",
       "gridPos": { "h": 8, "w": 6, "x": 18, "y": 31 },
-      "datasource": { "type": "postgres", "uid": "${DS_POSTGRES}" },
+      "datasource": { "type": "postgres", "uid": "postgres" },
       "options": {
         "basemap": { "name": "OSM Standard", "type": "osm-standard" },
         "controls": { "mouseWheelZoom": true, "showZoom": true },
