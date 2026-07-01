@@ -23,9 +23,9 @@ if grep -q "GANTI_DENGAN_FERNET_KEY" .env; then
   echo "Fernet Key berhasil di-generate dan disimpan ke .env"
 fi
 
-# 3. Pull semua image dulu (lebih cepat dari on-demand)
+# 3. Pull semua image
 echo ""
-echo "Pulling Docker images (butuh beberapa menit pertama kali)..."
+echo "Pulling Docker images..."
 docker compose pull
 
 # 4. Jalankan stack
@@ -55,11 +55,10 @@ echo " Setup selesai! Akses via browser:"
 echo "======================================"
 echo " Airflow       -> http://localhost:8080"
 echo " Grafana       -> http://localhost:3000"
-echo " MLflow        -> http://localhost:5000"
 echo " MinIO Console -> http://localhost:9001"
 echo " Spark UI      -> http://localhost:8081"
 echo " Prometheus    -> http://localhost:9090"
 echo ""
-echo " Jalankan sensor simulator:"
-echo " cd producer && pip install kafka-python && python sensor_simulator.py"
+echo " Jalankan API Ingestor (Streaming):"
+echo " cd producer && pip install -r requirements.txt && python api_ingestor.py"
 echo "======================================"
