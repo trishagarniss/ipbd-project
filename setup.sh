@@ -7,6 +7,21 @@ echo "======================================"
 echo " AQI Watch Surakarta — Setup"
 echo "======================================"
 
+# Deteksi Python interpreter (prefer uv, fallback python3/python)
+PYTHON=""
+if command -v uv &>/dev/null; then
+  PYTHON="uv run python"
+elif command -v python3 &>/dev/null; then
+  PYTHON="python3"
+elif command -v python &>/dev/null; then
+  PYTHON="python"
+else
+  echo "ERROR: Python interpreter tidak ditemukan."
+  echo "Install uv (https://docs.astral.sh/uv/) atau Python."
+  exit 1
+fi
+echo "  Python: $PYTHON"
+
 # 1. Cek .env ada
 if [ ! -f .env ]; then
   echo "ERROR: file .env tidak ditemukan!"
@@ -18,7 +33,7 @@ fi
 if grep -q "AIRFLOW_FERNET_KEY=CHANGE_ME" .env; then
   echo ""
   echo "Generating Airflow Fernet Key..."
-  FERNET=$(uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+  FERNET=$($PYTHON -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
   sed -i "s|AIRFLOW_FERNET_KEY=CHANGE_ME|AIRFLOW_FERNET_KEY=$FERNET|g" .env
   echo "Fernet Key berhasil di-generate dan disimpan ke .env"
 fi
@@ -26,7 +41,7 @@ fi
 # 3. Generate config dari template (alertmanager.yml)
 echo ""
 echo "Generating config files from templates..."
-uv run python scripts/generate_configs.py
+$PYTHON scripts/generate_configs.py
 
 # 4. Pull semua image
 echo ""
@@ -66,5 +81,5 @@ echo " Prometheus    -> http://localhost:9090"
 echo " MLflow        -> http://localhost:5000"
 echo ""
 echo " Jalankan API Ingestor (Streaming):"
-echo " cd producer && uv pip install -r requirements.txt && python api_ingestor.py"
+echo " cd producer && uv pip install -r requirements.txt && $PYTHON api_ingestor.py"
 echo "======================================"
