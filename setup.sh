@@ -22,15 +22,19 @@ else
 fi
 echo "  Python: $PYTHON"
 
-# Deteksi Docker command (Windows Git Bash butuh docker.exe)
+# Deteksi Docker command (Windows Git Bash butuh docker.exe, WSL stub doang gak cukup)
 DOCKER=""
-if command -v docker &>/dev/null; then
-  DOCKER="docker"
-elif command -v docker.exe &>/dev/null; then
+if command -v docker.exe &>/dev/null; then
   DOCKER="docker.exe"
+elif command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+  DOCKER="docker"
+elif command -v docker &>/dev/null; then
+  echo "WARNING: 'docker' ditemukan tapi Docker daemon tidak merespon."
+  echo "  Coba enable WSL integration di Docker Desktop, atau pastikan Docker Desktop running."
+  exit 1
 else
   echo "ERROR: Docker tidak ditemukan."
-  echo "Pastikan Docker Desktop sudah terinstall dan running."
+  echo "  Pastikan Docker Desktop sudah terinstall dan running."
   exit 1
 fi
 echo "  Docker: $DOCKER"
