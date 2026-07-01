@@ -105,13 +105,13 @@ def read_raw_csv(spark: SparkSession, input_files: list[str]):
         StructField("no2",         FloatType(),   True),
         StructField("so2",         FloatType(),   True),
         StructField("o3",          FloatType(),   True),
+        StructField("ispu",          FloatType(),   True),
+        StructField("ispu_category", StringType(),  True),
         StructField("temperature", FloatType(),   True),
         StructField("humidity",    FloatType(),   True),
         StructField("wind_speed",  FloatType(),   True),
         StructField("precipitation", FloatType(), True),
         StructField("cloud_cover",  FloatType(),  True),
-        StructField("ispu",          FloatType(),   True),
-        StructField("ispu_category", StringType(),  True),
     ])
 
     if not input_files:
@@ -268,7 +268,7 @@ def main():
         datefmt="%Y-%m-%dT%H:%M:%S"
     )
     date_str = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y-%m-%d")
-    log.info("===== Batch ETL mulai - tanggal: %s =====", date_str)
+    log.info("Batch ETL mulai...", date_str)
 
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
@@ -287,7 +287,7 @@ def main():
         write_to_postgres(df_daily, "daily_aqi")
         write_to_minio(spark, df_daily, tmp_dir)
 
-        log.info("===== Batch ETL selesai =====")
+        log.info("Batch ETL selesai.", date_str)
 
 
 if __name__ == "__main__":
