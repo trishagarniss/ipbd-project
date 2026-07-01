@@ -215,7 +215,7 @@ def upload_csv_to_minio(s3, station, rows):
 
 def main():
     setup_logging()
-    log.info("===== Batch Extract mulai =====")
+    log.info("Batch Extract mulai...")
 
     locations = load_locations()
     s3 = create_minio_client()
@@ -230,7 +230,7 @@ def main():
         upload_csv_to_minio(s3, station, rows)
         total_rows += len(rows)
 
-    log.info("===== Batch Extract selesai — total %d rows =====", total_rows)
+    log.info("Batch Extract selesai — total %d rows", total_rows)
 
 
 if __name__ == "__main__":
