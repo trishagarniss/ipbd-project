@@ -34,7 +34,7 @@ aqi-watch-surakarta/
 ├── ml/
 │   ├── train.py              # Random Forest + KMeans → MLflow
 │   ├── predict.py            # Load model → batch predict → PostgreSQL
-│   ├── ge_validation.py      # Great Expectations — data quality check
+│   ├── validation.py         # Data quality check (custom SQL)
 │   └── requirements.txt      # Dependencies ML
 ├── prometheus/
 │   ├── prometheus.yml        # Scrape config
@@ -42,7 +42,8 @@ aqi-watch-surakarta/
 │   ├── generate_configs.py   # Generate alertmanager.yml dari .env
 │   └── rules/aqi_alerts.yml  # 5 alert rules
 ├── grafana/
-│   └── dashboards/           # Dashboard JSON (import manual)
+│   ├── datasources/          # Auto-provisioning: koneksi PostgreSQL
+│   └── dashboards/           # Auto-provisioning: dashboard ISPU
 ├── docs/
 │   ├── metadata.md           # Metadata 5 tabel database
 │   ├── run-demo.md           # Tutorial demo end-to-end

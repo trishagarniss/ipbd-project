@@ -38,7 +38,7 @@ POLLUTANT_CHECKS = {
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] ge_validation - %(message)s",
+        format="%(asctime)s [%(levelname)s] validation - %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S"
     )
 
@@ -110,7 +110,7 @@ def validate_recent_data(conn, table: str):
 
 def main():
     setup_logging()
-    log.info("===== Great Expectations — Data Quality Check =====")
+    log.info("===== Data Quality Check =====")
 
     conn = psycopg2.connect(**POSTGRES_CONFIG)
 
