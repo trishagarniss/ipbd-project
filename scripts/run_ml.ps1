@@ -11,6 +11,8 @@ $projectRoot = Resolve-Path "$PSScriptRoot/.."
 
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
+$env:PYTHONIOENCODING = "utf-8"
+
 function Log { param([string]$msg) Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $msg" }
 
 function Invoke-Audit {
@@ -35,9 +37,7 @@ Log "Predict: $(if ($SkipPredict) { 'SKIP' } else { '1x' })"
 Log "Validation: $(if ($SkipValidation) { 'SKIP' } else { '1x' })"
 Log ""
 
-# ============================================================
 # 1. TRAIN (Nx)
-# ============================================================
 $trainResults = @()
 
 if (-not $SkipTrain) {
@@ -95,9 +95,7 @@ if (-not $SkipTrain) {
     Log ""
 }
 
-# ============================================================
 # 2. PREDICT (1x)
-# ============================================================
 $predictResult = $null
 
 if (-not $SkipPredict) {
@@ -148,9 +146,7 @@ if (-not $SkipPredict) {
     Log ""
 }
 
-# ============================================================
 # 3. VALIDATION (1x)
-# ============================================================
 $validationResult = $null
 
 if (-not $SkipValidation) {
@@ -203,9 +199,7 @@ if (-not $SkipValidation) {
     Log ""
 }
 
-# ============================================================
 # 4. RINGKASAN
-# ============================================================
 Log "============================================"
 Log "           RINGKASAN ML PIPELINE            "
 Log "============================================"
@@ -215,7 +209,7 @@ if (-not $SkipTrain) {
     Log "TRAIN (${TrainCount}x)"
     foreach ($r in $trainResults) {
         $status = if ($r.ok) { "SUCCESS" } else { "FAILED" }
-        Log "  Run #$($r.run): $status | ${$r.loaded} rows, $($r.samples) train samples, acc=$($r.accuracy) f1=$($r.f1) | $($r.dur)s"
+        Log "  Run #$($r.run): $status | $($r.loaded) rows, $($r.samples) train samples, acc=$($r.accuracy) f1=$($r.f1) | $($r.dur)s"
     }
     Log ""
 }
@@ -240,7 +234,7 @@ if (-not $SkipValidation -and $validationResult) { Log "  Validation: $($validat
 # Final DB check
 Log ""
 Log "Verifikasi PostgreSQL:"
-docker compose exec -u root postgres psql -U aqi_user -d aqi_db -c "SELECT dag_id, status, records_in, records_out FROM pipeline_audit WHERE dag_id LIKE 'manual_ml%' ORDER BY id;" 2>&1
+docker compose exec -u root postgres psql -U aqi_user -d aqi_db -c "SELECT dag_id, status, records_in, records_out FROM pipeline_audit WHERE dag_id LIKE 'manual_ml%' AND started_at >= NOW() - interval '5 minutes' ORDER BY id;" 2>&1
 docker compose exec -u root postgres psql -U aqi_user -d aqi_db -c "SELECT count(*) AS predictions_total FROM predictions;" 2>&1
 
 Log ""

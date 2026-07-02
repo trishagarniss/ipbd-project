@@ -17,6 +17,8 @@ POSTGRES_CONFIG = {
     "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
+if "postgres" in POSTGRES_CONFIG["host"]:
+    POSTGRES_CONFIG["host"] = "localhost"
 
 
 POLLUTANT_CHECKS = {

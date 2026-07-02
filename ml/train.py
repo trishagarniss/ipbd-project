@@ -31,6 +31,8 @@ POSTGRES_CONFIG = {
     "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
+if "postgres" in POSTGRES_CONFIG["host"]:
+    POSTGRES_CONFIG["host"] = "localhost"
 
 MLFLOW_URI = os.getenv("MLFLOW_URI", "http://localhost:5000")
 MLFLOW_EXPERIMENT = "aqi-classifier"
@@ -170,8 +172,10 @@ def train_rf(X_train, X_test, y_train, y_test, feature_cols):
 
     log.info("RF best params: %s", grid.best_params_)
     log.info("RF accuracy: %.4f, f1: %.4f", accuracy, f1)
+    labels = np.unique(np.concatenate([y_test_enc, y_pred_enc]))
     log.info("Classification report:\n%s",
-                classification_report(y_test_enc, y_pred_enc, target_names=le.classes_, zero_division=0))
+                classification_report(y_test_enc, y_pred_enc, labels=labels,
+                                      target_names=le.inverse_transform(labels), zero_division=0))
 
     return best_rf, le, {
         "accuracy": accuracy,
@@ -272,11 +276,13 @@ def main():
             mlflow.sklearn.log_model(
                 sk_model=model,
                 artifact_path="model",
-                registered_model_name=MODEL_NAME,
             )
 
+            model_uri = f"runs:/{run.info.run_id}/model"
+            mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
+
             log.info("Run ID: %s", run.info.run_id)
-            log.info("Model '%s' logged ke MLflow.", MODEL_NAME)
+            log.info("Model '%s' logged & registered ke MLflow.", MODEL_NAME)
             log.info("ML Training selesai.")
 
         except Exception as e:
