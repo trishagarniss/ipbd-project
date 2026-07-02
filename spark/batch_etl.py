@@ -230,7 +230,7 @@ def write_to_postgres(df, table: str):
     from psycopg2.extras import execute_values
 
     columns = df.columns
-    rows = [tuple(r) for r in df.toPandas().to_dict(orient="records")]
+    rows = [tuple(row[col] for col in columns) for row in df.collect()]
 
     conn = psycopg2.connect(
         host=os.getenv("POSTGRES_HOST", "postgres"),

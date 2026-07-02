@@ -200,8 +200,10 @@ def upload_csv_to_minio(s3, station, rows):
     writer.writeheader()
     writer.writerows(rows)
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-    key = f"batch_{station['id']}_{timestamp}.csv"
+    now = datetime.now(timezone.utc)
+    date_str = now.strftime("%Y-%m-%d")
+    timestamp = now.strftime("%Y%m%d%H%M%S")
+    key = f"{date_str}/batch_{station['id']}_{timestamp}.csv"
 
     s3.put_object(
         Bucket=MINIO_BUCKET_RAW,
