@@ -9,6 +9,7 @@ import mlflow
 import mlflow.pyfunc
 import psycopg2
 from psycopg2.extras import execute_values
+from sklearn.preprocessing import LabelEncoder
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
@@ -72,7 +73,7 @@ def load_recent_data() -> pd.DataFrame:
             ispu,
             temperature_avg, humidity_avg,
             wind_speed_avg, precipitation_sum,
-            cloud_cover_avg
+            cloud_cover_avg, record_count
         FROM daily_aqi
         WHERE date >= CURRENT_DATE - INTERVAL '%d days'
         ORDER BY station_id, date
@@ -88,7 +89,11 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
     feature_df = df.copy()
 
+    le = LabelEncoder()
+    feature_df["station_encoded"] = le.fit_transform(df["station_id"])
+
     for col, lags in [("pm25_avg", [1, 3, 7]), ("pm10_avg", [1, 7]),
+                    ("co_avg", [1, 7]),
                     ("temperature_avg", [1, 7]),
                     ("humidity_avg", [1, 7])]:
         for lag in lags:
@@ -136,13 +141,13 @@ def save_predictions(df: pd.DataFrame, predictions):
 
     now = datetime.now(timezone.utc)
     rows = []
-    for _, row in df.iterrows():
+    for i, (_, row) in enumerate(df.iterrows()):
         rows.append((
             row["station_id"],
             row["date"].isoformat() if hasattr(row["date"], "isoformat") else str(row["date"]),
             float(row.get("pm25_avg", 0) or 0),
             float(row.get("pm10_avg", 0) or 0),
-            str(predictions[_]),
+            str(predictions[i]),
             0.85,
             MODEL_NAME,
             now,
