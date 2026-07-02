@@ -11,10 +11,10 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 log = logging.getLogger(__name__)
 
 POSTGRES_CONFIG = {
-    "host":     os.getenv("POSTGRES_HOST", "localhost"),
-    "port":     int(os.getenv("POSTGRES_PORT", 5432)),
-    "dbname":   os.getenv("POSTGRES_DB", "aqi_db"),
-    "user":     os.getenv("POSTGRES_USER", "aqi_user"),
+    "host": os.getenv("POSTGRES_HOST", "localhost"),
+    "port": int(os.getenv("POSTGRES_PORT", 5432)),
+    "dbname": os.getenv("POSTGRES_DB", "aqi_db"),
+    "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
 
@@ -57,7 +57,7 @@ def validate_table(conn, table: str, date_col: str = "date"):
         log.warning("  WARNING: %d null dates ditemukan!", null_dates)
 
     cursor.execute(f"SELECT column_name, data_type FROM information_schema.columns "
-                   f"WHERE table_name = '{table}' AND table_schema = 'public'")
+                    f"WHERE table_name = '{table}' AND table_schema = 'public'")
     cols = cursor.fetchall()
     log.info("  Columns (%d): %s", len(cols), [c[0] for c in cols])
 
@@ -79,7 +79,7 @@ def validate_ranges(conn, table: str):
 
     for col, (lo, hi) in POLLUTANT_CHECKS.items():
         cursor.execute(f"SELECT COUNT(*) FROM {table} "
-                       f"WHERE {col} IS NOT NULL AND ({col} < {lo} OR {col} > {hi})")
+                        f"WHERE {col} IS NOT NULL AND ({col} < {lo} OR {col} > {hi})")
         out_of_range = cursor.fetchone()[0]
         if out_of_range > 0:
             log.warning("  WARNING: %s — %d values di luar range [%s, %s]",
@@ -110,7 +110,7 @@ def validate_recent_data(conn, table: str):
 
 def main():
     setup_logging()
-    log.info("===== Data Quality Check =====")
+    log.info("Data Quality Check...")
 
     conn = psycopg2.connect(**POSTGRES_CONFIG)
 
@@ -129,7 +129,7 @@ def main():
         except Exception as e:
             log.error("  ERROR validasi %s: %s", table, e)
 
-    log.info("===== Quality Check selesai =====")
+    log.info("Quality Check selesai.")
     conn.close()
 
 

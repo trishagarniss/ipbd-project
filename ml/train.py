@@ -15,6 +15,8 @@ from sklearn.metrics import (
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 import mlflow
 import mlflow.sklearn
+import boto3
+from botocore.config import Config
 import psycopg2
 from dotenv import load_dotenv
 
@@ -23,16 +25,16 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 log = logging.getLogger(__name__)
 
 POSTGRES_CONFIG = {
-    "host":     os.getenv("POSTGRES_HOST", "localhost"),
-    "port":     int(os.getenv("POSTGRES_PORT", 5432)),
-    "dbname":   os.getenv("POSTGRES_DB", "aqi_db"),
-    "user":     os.getenv("POSTGRES_USER", "aqi_user"),
+    "host": os.getenv("POSTGRES_HOST", "localhost"),
+    "port": int(os.getenv("POSTGRES_PORT", 5432)),
+    "dbname": os.getenv("POSTGRES_DB", "aqi_db"),
+    "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
 
-MLFLOW_URI      = os.getenv("MLFLOW_URI", "http://localhost:5000")
+MLFLOW_URI = os.getenv("MLFLOW_URI", "http://localhost:5000")
 MLFLOW_EXPERIMENT = "aqi-classifier"
-MODEL_NAME        = "aqi-classifier"
+MODEL_NAME = "aqi-classifier"
 
 TRAIN_DAYS = 350
 TEST_DAYS  = 7
@@ -50,10 +52,10 @@ def load_data() -> pd.DataFrame:
     conn = psycopg2.connect(**POSTGRES_CONFIG)
     query = """
         SELECT station_id, date, pm25_avg, pm10_avg, co_avg,
-               no2_avg, so2_avg, o3_avg,
-               ispu, temperature_avg,
-               humidity_avg, wind_speed_avg, precipitation_sum,
-               cloud_cover_avg, aqi_category, record_count
+                no2_avg, so2_avg, o3_avg,
+                ispu, temperature_avg,
+                humidity_avg, wind_speed_avg, precipitation_sum,
+                cloud_cover_avg, aqi_category, record_count
         FROM daily_aqi
         WHERE date >= CURRENT_DATE - INTERVAL %s
         ORDER BY station_id, date
@@ -87,13 +89,13 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
         )
 
     for col, lags in [("pm25_avg", [1, 3, 7]), ("pm10_avg", [1, 7]),
-                       ("co_avg", [1, 7]), ("temperature_avg", [1, 7]),
-                       ("humidity_avg", [1, 7])]:
+                        ("co_avg", [1, 7]), ("temperature_avg", [1, 7]),
+                        ("humidity_avg", [1, 7])]:
         for lag in lags:
             df[f"{col}_lag_{lag}"] = df.groupby("station_id")[col].shift(lag)
 
     for col, window in [("pm25_avg", 3), ("pm10_avg", 3),
-                         ("ispu", 3), ("ispu", 7)]:
+                        ("ispu", 3), ("ispu", 7)]:
         df[f"{col}_roll_{window}"] = (
             df.groupby("station_id")[col]
             .transform(lambda g: g.rolling(window, min_periods=1).mean())
@@ -169,7 +171,7 @@ def train_rf(X_train, X_test, y_train, y_test, feature_cols):
     log.info("RF best params: %s", grid.best_params_)
     log.info("RF accuracy: %.4f, f1: %.4f", accuracy, f1)
     log.info("Classification report:\n%s",
-             classification_report(y_test_enc, y_pred_enc, target_names=le.classes_, zero_division=0))
+                classification_report(y_test_enc, y_pred_enc, target_names=le.classes_, zero_division=0))
 
     return best_rf, le, {
         "accuracy": accuracy,
@@ -201,9 +203,33 @@ def train_kmeans(df: pd.DataFrame):
     return kmeans, scaler
 
 
+def _ensure_mlflow_bucket():
+    endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
+    client = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+        aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "admin123"),
+        use_ssl=endpoint.startswith("https"),
+        verify=False,
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+            retries={"max_attempts": 3, "mode": "standard"},
+        ),
+        region_name="us-east-1",
+    )
+    try:
+        client.head_bucket(Bucket="mlflow")
+    except Exception:
+        client.create_bucket(Bucket="mlflow")
+        log.info("Bucket MinIO 'mlflow' dibuat untuk artifact MLflow")
+
+
 def main():
     setup_logging()
-    log.info("===== ML Training mulai =====")
+    log.info("ML Training mulai...")
+    _ensure_mlflow_bucket()
 
     mlflow.set_tracking_uri(MLFLOW_URI)
     mlflow.set_experiment(MLFLOW_EXPERIMENT)
@@ -249,7 +275,7 @@ def main():
 
             log.info("Run ID: %s", run.info.run_id)
             log.info("Model '%s' logged ke MLflow.", MODEL_NAME)
-            log.info("===== ML Training selesai =====")
+            log.info("ML Training selesai.")
 
         except Exception as e:
             log.error("Training gagal: %s", e)

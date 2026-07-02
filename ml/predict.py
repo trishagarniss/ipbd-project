@@ -16,10 +16,10 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 log = logging.getLogger(__name__)
 
 POSTGRES_CONFIG = {
-    "host":     os.getenv("POSTGRES_HOST", "localhost"),
-    "port":     int(os.getenv("POSTGRES_PORT", 5432)),
-    "dbname":   os.getenv("POSTGRES_DB", "aqi_db"),
-    "user":     os.getenv("POSTGRES_USER", "aqi_user"),
+    "host": os.getenv("POSTGRES_HOST", "localhost"),
+    "port": int(os.getenv("POSTGRES_PORT", 5432)),
+    "dbname": os.getenv("POSTGRES_DB", "aqi_db"),
+    "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
 
@@ -58,12 +58,12 @@ def load_recent_data() -> pd.DataFrame:
     conn = psycopg2.connect(**POSTGRES_CONFIG)
     query = """
         SELECT station_id, date,
-               pm25_avg, pm10_avg, co_avg,
-               no2_avg, so2_avg, o3_avg,
-               ispu,
-               temperature_avg, humidity_avg,
-               wind_speed_avg, precipitation_sum,
-               cloud_cover_avg
+            pm25_avg, pm10_avg, co_avg,
+            no2_avg, so2_avg, o3_avg,
+            ispu,
+            temperature_avg, humidity_avg,
+            wind_speed_avg, precipitation_sum,
+            cloud_cover_avg
         FROM daily_aqi
         WHERE date >= CURRENT_DATE - INTERVAL '%d days'
         ORDER BY station_id, date
@@ -80,15 +80,15 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     feature_df = df.copy()
 
     for col, lags in [("pm25_avg", [1, 3, 7]), ("pm10_avg", [1, 7]),
-                       ("temperature_avg", [1, 7]),
-                       ("humidity_avg", [1, 7])]:
+                    ("temperature_avg", [1, 7]),
+                    ("humidity_avg", [1, 7])]:
         for lag in lags:
             feature_df[f"{col}_lag_{lag}"] = (
                 df.groupby("station_id")[col].shift(lag)
             )
 
     for col, window in [("pm25_avg", 3), ("pm10_avg", 3),
-                         ("ispu", 3), ("ispu", 7)]:
+                        ("ispu", 3), ("ispu", 7)]:
         feature_df[f"{col}_roll_{window}"] = (
             df.groupby("station_id")[col]
             .transform(lambda g: g.rolling(window, min_periods=1).mean())
@@ -112,7 +112,7 @@ def get_latest_per_station(df: pd.DataFrame):
 
 def make_prediction(model, features: pd.DataFrame):
     exclude = {"station_id", "station_name", "region", "latitude", "longitude",
-               "date", "tanggal", "aqi_category", "created_at"}
+            "date", "tanggal", "aqi_category", "created_at"}
     feature_cols = [c for c in features.columns if c not in exclude]
     X = features[feature_cols].fillna(0)
 
@@ -144,7 +144,7 @@ def save_predictions(df: pd.DataFrame, predictions):
         """
         INSERT INTO predictions
             (station_id, window_start, pm25_avg, pm10_avg,
-             predicted_label, confidence, model_version, created_at)
+            predicted_label, confidence, model_version, created_at)
         VALUES %s
         """,
         rows,
@@ -157,7 +157,7 @@ def save_predictions(df: pd.DataFrame, predictions):
 
 def main():
     setup_logging()
-    log.info("===== Batch Predict mulai =====")
+    log.info("Batch Predict mulai...")
 
     model = load_model()
     if model is None:
@@ -174,7 +174,7 @@ def main():
     preds = make_prediction(model, latest)
     save_predictions(latest, preds)
 
-    log.info("===== Batch Predict selesai =====")
+    log.info("Batch Predict selesai.")
 
 
 if __name__ == "__main__":
