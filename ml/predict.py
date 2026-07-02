@@ -13,6 +13,13 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
+_endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
+if "minio:" in _endpoint:
+    _endpoint = _endpoint.replace("://minio:", "://localhost:")
+os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("MINIO_SECRET_KEY", "admin123")
+os.environ["MLFLOW_S3_ENDPOINT_URL"] = _endpoint
+
 log = logging.getLogger(__name__)
 
 POSTGRES_CONFIG = {
