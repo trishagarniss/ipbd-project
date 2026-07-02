@@ -205,6 +205,8 @@ def train_kmeans(df: pd.DataFrame):
 
 def _ensure_mlflow_bucket():
     endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
+    if "minio" in endpoint:
+        endpoint = endpoint.replace("://minio:", "://localhost:")
     client = boto3.client(
         "s3",
         endpoint_url=endpoint,
