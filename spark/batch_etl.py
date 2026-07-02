@@ -225,19 +225,37 @@ def write_to_postgres(df, table: str):
     if count == 0:
         log.warning("Tidak ada data ditulis ke %s — tabel kosong", table)
         return
-    (
-        df.write
-        .format("jdbc")
-        .option("url",      POSTGRES_URL)
-        .option("dbtable",  table)
-        .option("user",     POSTGRES_USER)
-        .option("password", POSTGRES_PASS)
-        .option("driver",   "org.postgresql.Driver")
-        .mode("overwrite")
-        .option("truncate", "true")
-        .save()
+
+    import psycopg2
+    from psycopg2.extras import execute_values
+
+    columns = df.columns
+    rows = [tuple(r) for r in df.toPandas().to_dict(orient="records")]
+
+    conn = psycopg2.connect(
+        host=os.getenv("POSTGRES_HOST", "postgres"),
+        port=int(os.getenv("POSTGRES_PORT", 5432)),
+        dbname=os.getenv("POSTGRES_DB", "aqi_db"),
+        user=POSTGRES_USER,
+        password=POSTGRES_PASS,
     )
-    log.info("Berhasil tulis %d baris ke %s", count, table)
+
+    cols_str = ", ".join(columns)
+    query = f"""
+        INSERT INTO {table} ({cols_str})
+        VALUES %s
+        ON CONFLICT (station_id, date) DO NOTHING
+    """
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                execute_values(cur, query, rows, page_size=1000)
+        log.info("Insert %d baris ke %s (duplikat skip)", count, table)
+    except Exception as e:
+        log.error("Gagal insert ke %s: %s", table, e)
+        raise
+    finally:
+        conn.close()
 
 
 def write_to_minio(spark: SparkSession, df, tmp_dir: str):

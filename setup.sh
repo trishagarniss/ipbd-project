@@ -85,7 +85,13 @@ echo "Menunggu Kafka siap..."
 sleep 15
 echo "Kafka siap!"
 
-# 8. Summary akses
+# 8. Install psycopg2 di spark-master (untuk batch_etl append mode)
+echo ""
+echo "Installing psycopg2-binary di spark-master..."
+$DOCKER compose exec -u root spark-master pip install psycopg2-binary -q
+echo "psycopg2-binary siap!"
+
+# 9. Summary akses
 echo ""
 echo "========================================"
 echo " Setup selesai! Akses via browser"
