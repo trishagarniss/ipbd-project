@@ -85,9 +85,17 @@ if (-not $SkipTrain) {
         if ($trainOk) {
             Invoke-Audit -dagId "manual_ml_train" -runId $runId -status SUCCESS -recordsIn $loadedRows -recordsOut $trainSamples
             Log "TRAIN #${i} OK: ${loadedRows} loaded, ${trainSamples} train samples, acc=$accuracy f1=$f1 (${dur}s)"
+            if (-not $SkipTelegram) {
+                $body = "$loadedRows loaded, $trainSamples samples, acc=$accuracy f1=$f1 | ${dur}s"
+                uv run python scripts/telegram_alert.py --notif "Train #${i}" --status SUCCESS --body "$body" 2>&1 | Out-Null
+            }
         } else {
             Invoke-Audit -dagId "manual_ml_train" -runId $runId -status FAILED
             Log "TRAIN #${i} FAILED (${dur}s)"
+            if (-not $SkipTelegram) {
+                $body = "${dur}s"
+                uv run python scripts/telegram_alert.py --notif "Train #${i}" --status FAILED --body "$body" 2>&1 | Out-Null
+            }
         }
         Log ""
     }
@@ -137,9 +145,17 @@ if (-not $SkipPredict) {
     if ($predictOk) {
         Invoke-Audit -dagId "manual_ml_predict" -runId $runId -status SUCCESS -recordsIn $loadedRows -recordsOut $predCount
         Log "PREDICT OK: ${predCount} predictions (${dur}s)"
+        if (-not $SkipTelegram) {
+            $body = "$loadedRows rows -> $predCount predictions | ${dur}s"
+            uv run python scripts/telegram_alert.py --notif "Predict" --status SUCCESS --body "$body" 2>&1 | Out-Null
+        }
     } else {
         Invoke-Audit -dagId "manual_ml_predict" -runId $runId -status FAILED
         Log "PREDICT FAILED (${dur}s)"
+        if (-not $SkipTelegram) {
+            $body = "${dur}s"
+            uv run python scripts/telegram_alert.py --notif "Predict" --status FAILED --body "$body" 2>&1 | Out-Null
+        }
     }
     Log ""
 } else {
@@ -190,9 +206,17 @@ if (-not $SkipValidation) {
         if ($validationResult.nWarnings -gt 0) {
             foreach ($w in $warnings) { Log "  WARN: $w" }
         }
+        if (-not $SkipTelegram) {
+            $body = "$($validationResult.nWarnings) warnings | ${dur}s"
+            uv run python scripts/telegram_alert.py --notif "Validation" --status SUCCESS --body "$body" 2>&1 | Out-Null
+        }
     } else {
         Invoke-Audit -dagId "manual_ml_validation" -runId $runId -status FAILED
         Log "VALIDATION FAILED (${dur}s)"
+        if (-not $SkipTelegram) {
+            $body = "${dur}s"
+            uv run python scripts/telegram_alert.py --notif "Validation" --status FAILED --body "$body" 2>&1 | Out-Null
+        }
     }
     Log ""
 } else {

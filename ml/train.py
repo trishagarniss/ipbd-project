@@ -152,8 +152,10 @@ def prepare_train_test(df: pd.DataFrame):
 def train_rf(X_train, X_test, y_train, y_test, feature_cols):
     log.info("Training Random Forest classifier...")
 
+    SEMUA_KATEGORI = ["Baik", "Berbahaya", "Sangat Tidak Sehat", "Sedang", "Tidak Sehat"]
     le = LabelEncoder()
-    y_train_enc = le.fit_transform(y_train)
+    le.fit(SEMUA_KATEGORI)
+    y_train_enc = le.transform(y_train)
     y_test_enc  = le.transform(y_test)
 
     param_grid = {

@@ -6,7 +6,7 @@ import pandas as pd
 import psycopg2
 import requests
 from dotenv import load_dotenv
-from sklearn.preprocessing import LabelEncoder
+import argparse
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -42,17 +42,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 
-def get_category_mapping():
-    conn = psycopg2.connect(**POSTGRES_CONFIG)
-    df = pd.read_sql("SELECT DISTINCT aqi_category FROM daily_aqi ORDER BY aqi_category", conn)
-    conn.close()
-
-    if df.empty:
-        return {}
-
-    le = LabelEncoder()
-    le.fit(df["aqi_category"])
-    return {i: name for i, name in enumerate(le.classes_)}
+CATEGORY_MAP = {0: "Baik", 1: "Berbahaya", 2: "Sangat Tidak Sehat", 3: "Sedang", 4: "Tidak Sehat"}
 
 
 def get_today_aqi():
@@ -81,7 +71,7 @@ def get_latest_predictions():
     return df
 
 
-def build_message(aqi_df, pred_df, cat_map):
+def build_message(aqi_df, pred_df):
     from datetime import timedelta
     tz = timezone(timedelta(hours=7))
     now = datetime.now(tz)
@@ -111,7 +101,7 @@ def build_message(aqi_df, pred_df, cat_map):
             p = pred_df[pred_df["station_id"] == row["station_id"]].iloc[0]
             try:
                 label_num = int(float(p["predicted_label"]))
-                pred_name = cat_map.get(label_num, p["predicted_label"])
+                pred_name = CATEGORY_MAP.get(label_num, p["predicted_label"])
             except (ValueError, TypeError):
                 pred_name = p["predicted_label"]
             pred_conf = f"{p['confidence']:.0%}"
@@ -124,6 +114,15 @@ def build_message(aqi_df, pred_df, cat_map):
         if i < len(aqi_df) - 1:
             lines.append("")
 
+    return "\n".join(lines)
+
+
+def build_notification(stage, status, body):
+    icon = "\u2705" if status == "SUCCESS" else "\u274C"
+    lines = [
+        f"{icon} <b>{stage}</b>",
+        f"<code>{body}</code>",
+    ]
     return "\n".join(lines)
 
 
@@ -159,17 +158,30 @@ def main():
         format="%(asctime)s [%(levelname)s] telegram - %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
-    log.info("Telegram Alert mulai...")
+    parser = argparse.ArgumentParser(description="Telegram alert untuk ISPU")
+    parser.add_argument("--notif", help="Mode notif pipeline (stage name)")
+    parser.add_argument("--status", help="Status: SUCCESS/FAILED")
+    parser.add_argument("--body", help="Body notif (detail bebas)")
+    args = parser.parse_args()
 
-    cat_map = get_category_mapping()
-    log.info("Category mapping: %s", cat_map)
+    if args.notif:
+        log.info("Pipeline notif: %s | %s", args.notif, args.status)
+        message = build_notification(args.notif, args.status or "", args.body or "")
+        ok = send_telegram(message)
+        if ok:
+            log.info("Telegram notif selesai — sukses")
+        else:
+            log.info("Telegram notif selesai — gagal")
+        return
+
+    log.info("Telegram Alert mulai...")
 
     aqi_df = get_today_aqi()
     pred_df = get_latest_predictions()
 
     log.info("AQI data: %d stasiun, Predictions: %d stasiun", len(aqi_df), len(pred_df))
 
-    message = build_message(aqi_df, pred_df, cat_map)
+    message = build_message(aqi_df, pred_df)
     log.debug("Message:\n%s", message)
 
     ok = send_telegram(message)

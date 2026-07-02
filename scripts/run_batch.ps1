@@ -1,10 +1,13 @@
 param(
-    [int]$Count = 3
+    [int]$Count = 3,
+    [switch]$SkipTelegram
 )
 
 $ErrorActionPreference = "Stop"
 $logDir = "docs/logs"
 $projectRoot = Resolve-Path "$PSScriptRoot/.."
+
+$env:PYTHONIOENCODING = "utf-8"
 
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
@@ -55,9 +58,17 @@ foreach ($line in $extractLines) {
 if ($extractOk) {
     Invoke-Audit -dagId "manual_extract" -runId "extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -status SUCCESS -recordsOut $rowCount
     Log "Extract OK: $rowCount rows (${durExtract}s)"
+    if (-not $SkipTelegram) {
+        $body = "$rowCount rows | ${durExtract}s"
+        uv run python scripts/telegram_alert.py --notif "Extract" --status SUCCESS --body "$body" 2>&1 | Out-Null
+    }
 } else {
     Log "Extract FAILED"
     Invoke-Audit -dagId "manual_extract" -runId "extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -status FAILED
+    if (-not $SkipTelegram) {
+        $body = "${durExtract}s"
+        uv run python scripts/telegram_alert.py --notif "Extract" --status FAILED --body "$body" 2>&1 | Out-Null
+    }
 }
 Log ""
 
@@ -107,9 +118,17 @@ for ($i = 1; $i -le $Count; $i++) {
     if ($etlOk) {
         Invoke-Audit -dagId "manual_etl" -runId $runId -status SUCCESS -recordsIn 43920 -recordsOut $inserted
         Log "ETL #${i} OK: ${inserted} inserted (${durEtl}s)"
+        if (-not $SkipTelegram) {
+            $body = "43920 -> ${inserted} rows | ${durEtl}s"
+            uv run python scripts/telegram_alert.py --notif "ETL #${i}" --status SUCCESS --body "$body" 2>&1 | Out-Null
+        }
     } else {
         Invoke-Audit -dagId "manual_etl" -runId $runId -status FAILED
         Log "ETL #${i} FAILED (${durEtl}s)"
+        if (-not $SkipTelegram) {
+            $body = "${durEtl}s"
+            uv run python scripts/telegram_alert.py --notif "ETL #${i}" --status FAILED --body "$body" 2>&1 | Out-Null
+        }
     }
     Log ""
 }
