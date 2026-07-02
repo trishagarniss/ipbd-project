@@ -286,7 +286,12 @@ def main():
             )
 
             model_uri = f"runs:/{run.info.run_id}/model"
-            mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
+            mv = mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
+
+            mlflow.tracking.MlflowClient().transition_model_version_stage(
+                name=MODEL_NAME, version=mv.version, stage="Production"
+            )
+            log.info("Model version %s -> stage Production", mv.version)
 
             log.info("Run ID: %s", run.info.run_id)
             log.info("Model '%s' logged & registered ke MLflow.", MODEL_NAME)

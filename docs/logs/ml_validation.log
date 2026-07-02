@@ -1,0 +1,42 @@
+=== ML VALIDATION 2026-07-02 23:51:48 ===
+2026-07-02T23:51:50 [INFO] validation - Data Quality Check...
+2026-07-02T23:51:50 [INFO] validation - --- raw_measurements ---
+2026-07-02T23:51:50 [INFO] validation - Validating table: raw_measurements
+2026-07-02T23:51:50 [INFO] validation -   Row count: 0
+2026-07-02T23:51:50 [INFO] validation -   Columns (24): ['id', 'station_id', 'station_name', 'region', 'latitude', 'longitude', 'timestamp', 'pm25', 'pm10', 'co', 'no2', 'so2', 'o3', 'uv_index', 'ispu', 'ispu_category', 'temperature', 'humidity', 'wind_speed', 'precipitation', 'precip_prob', 'weather_code', 'cloud_cover', 'created_at']
+2026-07-02T23:51:50 [INFO] validation -   Distinct stations: 0
+2026-07-02T23:51:50 [INFO] validation -   (tabel kosong, skip range check)
+2026-07-02T23:51:50 [INFO] validation - --- stream_agg ---
+2026-07-02T23:51:50 [INFO] validation - Validating table: stream_agg
+2026-07-02T23:51:50 [INFO] validation -   Row count: 0
+2026-07-02T23:51:50 [INFO] validation -   Columns (19): ['id', 'station_id', 'window_start', 'window_end', 'pm25_avg', 'pm10_avg', 'co_avg', 'no2_avg', 'so2_avg', 'o3_avg', 'uv_index_avg', 'ispu_avg', 'temperature_avg', 'humidity_avg', 'wind_speed_avg', 'precipitation_sum', 'cloud_cover_avg', 'record_count', 'created_at']
+2026-07-02T23:51:50 [INFO] validation -   Distinct stations: 0
+2026-07-02T23:51:50 [INFO] validation -   (tabel kosong, skip range check)
+2026-07-02T23:51:50 [INFO] validation - --- daily_aqi ---
+2026-07-02T23:51:50 [INFO] validation - Validating table: daily_aqi
+2026-07-02T23:51:50 [INFO] validation -   Row count: 1830
+2026-07-02T23:51:50 [INFO] validation -   Columns (18): ['id', 'station_id', 'date', 'pm25_avg', 'pm10_avg', 'co_avg', 'no2_avg', 'so2_avg', 'o3_avg', 'ispu', 'temperature_avg', 'humidity_avg', 'wind_speed_avg', 'precipitation_sum', 'cloud_cover_avg', 'aqi_category', 'record_count', 'created_at']
+2026-07-02T23:51:50 [INFO] validation -   Distinct stations: 5
+2026-07-02T23:51:50 [INFO] validation - Validating value ranges: daily_aqi
+2026-07-02T23:51:50 [INFO] validation -   OK: pm25 (pm25_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: pm10 (pm10_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: co (co_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: no2 (no2_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: so2 (so2_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: o3 (o3_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: ispu (ispu)
+2026-07-02T23:51:50 [INFO] validation -   OK: temperature (temperature_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: humidity (humidity_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: wind_speed (wind_speed_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: precipitation (precipitation_sum)
+2026-07-02T23:51:50 [INFO] validation -   OK: cloud_cover (cloud_cover_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: data terkini 2026-07-02
+2026-07-02T23:51:50 [INFO] validation - --- predictions ---
+2026-07-02T23:51:50 [INFO] validation - Validating table: predictions
+2026-07-02T23:51:50 [INFO] validation -   Row count: 10
+2026-07-02T23:51:50 [INFO] validation -   Columns (9): ['id', 'station_id', 'window_start', 'pm25_avg', 'pm10_avg', 'predicted_label', 'confidence', 'model_version', 'created_at']
+2026-07-02T23:51:50 [INFO] validation -   Distinct stations: 5
+2026-07-02T23:51:50 [INFO] validation - Validating value ranges: predictions
+2026-07-02T23:51:50 [INFO] validation -   OK: pm25 (pm25_avg)
+2026-07-02T23:51:50 [INFO] validation -   OK: pm10 (pm10_avg)
+2026-07-02T23:51:50 [INFO] validation - Quality Check selesai.
