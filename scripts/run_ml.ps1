@@ -1,8 +1,9 @@
 param(
-    [int]$TrainCount = 3,
+    [int]$TrainCount = 1,
     [switch]$SkipTrain,
     [switch]$SkipPredict,
-    [switch]$SkipValidation
+    [switch]$SkipValidation,
+    [switch]$SkipTelegram
 )
 
 $ErrorActionPreference = "Stop"
@@ -236,6 +237,14 @@ Log ""
 Log "Verifikasi PostgreSQL:"
 docker compose exec -u root postgres psql -U aqi_user -d aqi_db -c "SELECT dag_id, status, records_in, records_out FROM pipeline_audit WHERE dag_id LIKE 'manual_ml%' AND started_at >= NOW() - interval '5 minutes' ORDER BY id;" 2>&1
 docker compose exec -u root postgres psql -U aqi_user -d aqi_db -c "SELECT count(*) AS predictions_total FROM predictions;" 2>&1
+
+if (-not $SkipTelegram) {
+    $telegramLog = "$logDir/ml_telegram.log"
+    Log ">>> TELEGRAM -> $telegramLog"
+    "=== ML TELEGRAM $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $telegramLog
+    uv run python scripts/telegram_alert.py 2>&1 | Add-Content $telegramLog
+    Log ""
+}
 
 Log ""
 Log "=== ML PIPELINE SELESAI ==="
