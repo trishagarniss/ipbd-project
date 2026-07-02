@@ -3,9 +3,9 @@
 # Jalankan sekali setelah clone repo: bash setup.sh
 
 set -e
-echo "======================================"
-echo " AQI Watch Surakarta — Setup"
-echo "======================================"
+echo "============================="
+echo " AQI Watch Surakarta — Setup "
+echo "============================="
 
 # Deteksi Python interpreter (prefer uv, fallback python3/python)
 PYTHON=""
