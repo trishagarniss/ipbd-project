@@ -22,7 +22,7 @@ POSTGRES_URL  = os.getenv("POSTGRES_URL", "jdbc:postgresql://postgres:5432/aqi_d
 POSTGRES_USER = os.getenv("POSTGRES_USER", "aqi_user")
 POSTGRES_PASS = os.getenv("POSTGRES_PASSWORD", "password123")
 
-RAW_BUCKET       = "raw"
+RAW_BUCKET = "raw"
 PROCESSED_BUCKET = "processed"
 
 
@@ -96,25 +96,25 @@ def _download_raw_csvs(spark: SparkSession, tmp_dir: str) -> list[str]:
 
 def read_raw_csv(spark: SparkSession, input_files: list[str]):
     schema = StructType([
-        StructField("station_id",  StringType(),  True),
+        StructField("station_id",  StringType(), True),
         StructField("station_name", StringType(), True),
-        StructField("region",      StringType(),  True),
-        StructField("latitude",    FloatType(),   True),
-        StructField("longitude",   FloatType(),   True),
-        StructField("tanggal",     StringType(),  True),
-        StructField("pm25",        FloatType(),   True),
-        StructField("pm10",        FloatType(),   True),
-        StructField("co",          FloatType(),   True),
-        StructField("no2",         FloatType(),   True),
-        StructField("so2",         FloatType(),   True),
-        StructField("o3",          FloatType(),   True),
-        StructField("ispu",          FloatType(),   True),
-        StructField("ispu_category", StringType(),  True),
-        StructField("temperature", FloatType(),   True),
-        StructField("humidity",    FloatType(),   True),
-        StructField("wind_speed",  FloatType(),   True),
+        StructField("region", StringType(), True),
+        StructField("latitude", FloatType(), True),
+        StructField("longitude", FloatType(), True),
+        StructField("tanggal", StringType(), True),
+        StructField("pm25", FloatType(), True),
+        StructField("pm10", FloatType(), True),
+        StructField("co", FloatType(), True),
+        StructField("no2", FloatType(), True),
+        StructField("so2", FloatType(), True),
+        StructField("o3", FloatType(), True),
+        StructField("ispu", FloatType(), True),
+        StructField("ispu_category", StringType(), True),
+        StructField("temperature", FloatType(), True),
+        StructField("humidity", FloatType(), True),
+        StructField("wind_speed", FloatType(), True),
         StructField("precipitation", FloatType(), True),
-        StructField("cloud_cover",  FloatType(),  True),
+        StructField("cloud_cover",  FloatType(), True),
     ])
 
     if not input_files:
@@ -148,7 +148,7 @@ def clean_data(df):
     )
     after_not_null = df.count()
     log.debug("Setelah filter null pollutants: %d -> %d (hapus %d)",
-              total_before, after_not_null, total_before - after_not_null)
+                total_before, after_not_null, total_before - after_not_null)
     if after_not_null == 0:
         log.warning("Semua baris memiliki null pada polutan — tidak ada data valid")
 
@@ -195,26 +195,25 @@ def calculate_aqi_category(df):
 def aggregate_daily(df):
     log.debug("Agregasi harian dimulai — input: %d baris", df.count())
     agg = df.groupBy("station_id", "date").agg(
-        F.round(F.avg("pm25"),         2).alias("pm25_avg"),
-        F.round(F.avg("pm10"),         2).alias("pm10_avg"),
-        F.round(F.avg("co"),           2).alias("co_avg"),
-        F.round(F.avg("no2"),          2).alias("no2_avg"),
-        F.round(F.avg("so2"),          2).alias("so2_avg"),
-        F.round(F.avg("o3"),           2).alias("o3_avg"),
-        # uv_index tidak ada di data CSV, skip
+        F.round(F.avg("pm25"), 2).alias("pm25_avg"),
+        F.round(F.avg("pm10"), 2).alias("pm10_avg"),
+        F.round(F.avg("co"), 2).alias("co_avg"),
+        F.round(F.avg("no2"), 2).alias("no2_avg"),
+        F.round(F.avg("so2"), 2).alias("so2_avg"),
+        F.round(F.avg("o3"), 2).alias("o3_avg"),
         F.round(F.avg("ispu"),  2).alias("ispu"),
-        F.round(F.avg("temperature"),  2).alias("temperature_avg"),
-        F.round(F.avg("humidity"),     2).alias("humidity_avg"),
-        F.round(F.avg("wind_speed"),   2).alias("wind_speed_avg"),
-        F.round(F.sum("precipitation"),2).alias("precipitation_sum"),
-        F.round(F.avg("cloud_cover"),  2).alias("cloud_cover_avg"),
+        F.round(F.avg("temperature"), 2).alias("temperature_avg"),
+        F.round(F.avg("humidity"), 2).alias("humidity_avg"),
+        F.round(F.avg("wind_speed"), 2).alias("wind_speed_avg"),
+        F.round(F.sum("precipitation"), 2).alias("precipitation_sum"),
+        F.round(F.avg("cloud_cover"), 2).alias("cloud_cover_avg"),
         F.first("aqi_category").alias("aqi_category"),
         F.count("*").alias("record_count"),
     )
     count = agg.count()
     log.info("Agregasi harian: %d baris", count)
     if count == 0:
-        log.warning("Agregasi harian menghasilkan 0 baris — kemungkinan data kosong")
+        log.warning("Agregasi harian menghasilkan 0 baris — kemungkinan data kosong.")
     return agg
 
 
