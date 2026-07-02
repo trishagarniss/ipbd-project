@@ -45,6 +45,9 @@ dev = [
 [tool.pylance]
 typeCheckingMode = "basic"
 
+[tool.setuptools.packages.find]
+exclude = ["*"]
+
 [build-system]
 requires = ["setuptools>=64.0"]
 build-backend = "setuptools.build_meta"
