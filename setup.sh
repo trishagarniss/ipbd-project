@@ -88,8 +88,8 @@ echo "Kafka siap!"
 # 8. Install psycopg2 di spark-master (untuk batch_etl append mode)
 echo ""
 echo "Installing psycopg2-binary di spark-master..."
-$DOCKER compose exec -u root spark-master pip install psycopg2-binary -q
-echo "psycopg2-binary siap!"
+$DOCKER compose exec -u root spark-master pip install boto3 psycopg2-binary -q
+echo "boto3 + psycopg2-binary siap!"
 
 # 9. Summary akses
 echo ""
