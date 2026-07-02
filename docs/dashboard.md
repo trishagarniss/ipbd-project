@@ -68,7 +68,7 @@ Dashboard ini dirancang untuk tiga peran utama:
 
 ## Batasan & Asumsi
 
-- **Data:** Menggunakan Open-Meteo API (model, bukan sensor fisik) — akurasi ±15%
+- **Data:** Menggunakan Open-Meteo API (data model, bukan sensor fisik)
 - **Cakupan:** 5 titik kecamatan — interpolasi linier untuk area antar stasiun
 - **ISPU:** Dihitung dari 6 parameter (PM2.5, PM10, CO, NO2, SO2, O3) sesuai Permen LHK No. 14/2020 minus HC
 - **Prediksi:** Random Forest — confidence 0.85 (baseline, perlu tuning lanjutan)
