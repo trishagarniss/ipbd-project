@@ -10,6 +10,7 @@ from pathlib import Path
 import requests
 import boto3
 from botocore.config import Config as BotoConfig
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ml"))
 from ispu import compute_ispu
@@ -19,9 +20,6 @@ log = logging.getLogger(__name__)
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 WEATHER_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "admin123")
 MINIO_BUCKET_RAW = "raw"
 
 LOCATIONS_PATH = "config/locations.json"
@@ -44,11 +42,14 @@ def load_locations():
 
 
 def create_minio_client():
+    ep = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
+    ak = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    sk = os.getenv("MINIO_SECRET_KEY", "admin123")
     return boto3.client(
         "s3",
-        endpoint_url=MINIO_ENDPOINT,
-        aws_access_key_id=MINIO_ACCESS_KEY,
-        aws_secret_access_key=MINIO_SECRET_KEY,
+        endpoint_url=ep,
+        aws_access_key_id=ak,
+        aws_secret_access_key=sk,
         use_ssl=False,
         config=BotoConfig(
             s3={"addressing_style": "path"},
@@ -216,6 +217,14 @@ def upload_csv_to_minio(s3, station, rows):
 
 def main():
     setup_logging()
+
+    env_path = "/opt/airflow/.env"
+    if os.path.exists(env_path):
+        load_dotenv(env_path)
+        log.info("Loaded environment from %s", env_path)
+    else:
+        log.warning(".env not found at %s, using defaults", env_path)
+
     log.info("Batch Extract mulai...")
 
     locations = load_locations()

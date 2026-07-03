@@ -4,6 +4,7 @@ import sys
 import os
 import subprocess
 import time
+import requests
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -66,6 +67,24 @@ def _audit_success(**context):
     _audit_finish("SUCCESS", **context)
 
 
+def _notify_success(context):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    dag_id = context["dag"].dag_id
+    run_id = context["run_id"]
+    msg = f"\u2705 DAG {dag_id} berhasil\nRun: {run_id[:40]}"
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": msg},
+            timeout=10,
+        )
+    except Exception:
+        log.warning("Gagal kirim notif Telegram", exc_info=True)
+
+
 def _audit_failure(context):
     audit_id = context["ti"].xcom_pull(key="audit_id")
     if audit_id is None:
@@ -108,6 +127,7 @@ with DAG(
     start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["aqi-watch", "batch"],
+    on_success_callback=_notify_success,
     on_failure_callback=_audit_failure,
 ) as dag:
 
