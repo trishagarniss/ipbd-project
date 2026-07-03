@@ -46,7 +46,7 @@ MLFLOW_URI = os.getenv("MLFLOW_URI", "http://localhost:5000")
 MLFLOW_EXPERIMENT = "aqi-classifier"
 MODEL_NAME = "aqi-classifier"
 
-TRAIN_DAYS = 350
+TRAIN_DAYS = 365
 TEST_DAYS  = 7
 
 

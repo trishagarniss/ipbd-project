@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 import mlflow
-import mlflow.pyfunc
+import mlflow.sklearn
 import psycopg2
 from psycopg2.extras import execute_values
 from sklearn.preprocessing import LabelEncoder
@@ -50,13 +50,13 @@ def setup_logging():
 def load_model():
     mlflow.set_tracking_uri(MLFLOW_URI)
     try:
-        model = mlflow.pyfunc.load_model(f"models:/{MODEL_NAME}/Production")
+        model = mlflow.sklearn.load_model(f"models:/{MODEL_NAME}/Production")
         log.info("Model '%s' Production berhasil di-load.", MODEL_NAME)
         return model
     except Exception as e:
         log.warning("Model Production belum ada, coba latest: %s", e)
         try:
-            model = mlflow.pyfunc.load_model(f"models:/{MODEL_NAME}/latest")
+            model = mlflow.sklearn.load_model(f"models:/{MODEL_NAME}/latest")
             log.info("Model '%s' latest berhasil di-load.", MODEL_NAME)
             return model
         except Exception as e2:

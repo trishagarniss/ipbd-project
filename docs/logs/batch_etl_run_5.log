@@ -1,14 +1,14 @@
-=== BATCH ETL RUN #5 2026-07-02 12:12:49 ===
+=== BATCH ETL RUN #5 2026-07-03 09:36:24 ===
 WARNING: Using incubator modules: jdk.incubator.vector
 :: loading settings :: url = jar:file:/opt/bitnami/spark/jars/ivy-2.5.3.jar!/org/apache/ivy/core/settings/ivysettings.xml
 Ivy Default Cache set to: /tmp/.ivy2/cache
 The jars for the packages stored in: /tmp/.ivy2/jars
 org.postgresql#postgresql added as a dependency
-:: resolving dependencies :: org.apache.spark#spark-submit-parent-fd8a1cfa-0a9f-45a1-a65a-642e6e1bfa65;1.0
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-8fab7373-84d5-4bc5-bb3e-7b727f360df2;1.0
 	confs: [default]
 	found org.postgresql#postgresql;42.7.1 in central
 	found org.checkerframework#checker-qual;3.41.0 in central
-:: resolution report :: resolve 154ms :: artifacts dl 4ms
+:: resolution report :: resolve 162ms :: artifacts dl 4ms
 	:: modules in use:
 	org.checkerframework#checker-qual;3.41.0 from central in [default]
 	org.postgresql#postgresql;42.7.1 from central in [default]
@@ -18,84 +18,94 @@ org.postgresql#postgresql added as a dependency
 	---------------------------------------------------------------------
 	|      default     |   2   |   0   |   0   |   0   ||   2   |   0   |
 	---------------------------------------------------------------------
-:: retrieving :: org.apache.spark#spark-submit-parent-fd8a1cfa-0a9f-45a1-a65a-642e6e1bfa65
+:: retrieving :: org.apache.spark#spark-submit-parent-8fab7373-84d5-4bc5-bb3e-7b727f360df2
 	confs: [default]
 	0 artifacts copied, 2 already retrieved (0kB/6ms)
-26/07/02 05:12:51 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
-2026-07-02T05:12:53 [INFO] batch_etl - Batch ETL mulai...
+26/07/03 02:36:28 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2026-07-03T02:36:30 [INFO] batch_etl - Batch ETL mulai...
 Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
-26/07/02 05:12:53 INFO SparkContext: Running Spark version 4.0.0
-26/07/02 05:12:53 INFO SparkContext: OS info Linux, 6.18.33.1-microsoft-standard-WSL2, amd64
-26/07/02 05:12:53 INFO SparkContext: Java version 17.0.15
-26/07/02 05:12:53 INFO ResourceUtils: ==============================================================
-26/07/02 05:12:53 INFO ResourceUtils: No custom resources configured for spark.driver.
-26/07/02 05:12:53 INFO ResourceUtils: ==============================================================
-26/07/02 05:12:53 INFO SparkContext: Submitted application: AQI-Watch-BatchETL
-26/07/02 05:12:53 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
-26/07/02 05:12:53 INFO ResourceProfile: Limiting resource is cpu
-26/07/02 05:12:53 INFO ResourceProfileManager: Added ResourceProfile id: 0
-26/07/02 05:12:53 INFO SecurityManager: Changing view acls to: root,spark
-26/07/02 05:12:53 INFO SecurityManager: Changing modify acls to: root,spark
-26/07/02 05:12:53 INFO SecurityManager: Changing view acls groups to: root,spark
-26/07/02 05:12:53 INFO SecurityManager: Changing modify acls groups to: root,spark
-26/07/02 05:12:53 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root, spark groups with view permissions: EMPTY; users with modify permissions: root, spark; groups with modify permissions: EMPTY; RPC SSL disabled
-26/07/02 05:12:54 INFO Utils: Successfully started service 'sparkDriver' on port 45825.
-26/07/02 05:12:54 INFO SparkEnv: Registering MapOutputTracker
-26/07/02 05:12:54 INFO SparkEnv: Registering BlockManagerMaster
-26/07/02 05:12:54 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
-26/07/02 05:12:54 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
-26/07/02 05:12:54 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
-26/07/02 05:12:54 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-d73bf802-6c70-4580-9864-34aeac0ffabe
-26/07/02 05:12:54 INFO SparkEnv: Registering OutputCommitCoordinator
-26/07/02 05:12:54 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
-26/07/02 05:12:54 INFO Utils: Successfully started service 'SparkUI' on port 4040.
-26/07/02 05:12:54 INFO SparkContext: Added JAR file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar at spark://ad99a099ab6a:45825/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO SparkContext: Added JAR file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar at spark://ad99a099ab6a:45825/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO SparkContext: Added file file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar at file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO Utils: Copying /tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.postgresql_postgresql-42.7.1.jar
-26/07/02 05:12:54 INFO SparkContext: Added file file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar at file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO Utils: Copying /tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.checkerframework_checker-qual-3.41.0.jar
-26/07/02 05:12:54 INFO SecurityManager: Changing view acls to: root,spark
-26/07/02 05:12:54 INFO SecurityManager: Changing modify acls to: root,spark
-26/07/02 05:12:54 INFO SecurityManager: Changing view acls groups to: root,spark
-26/07/02 05:12:54 INFO SecurityManager: Changing modify acls groups to: root,spark
-26/07/02 05:12:54 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root, spark groups with view permissions: EMPTY; users with modify permissions: root, spark; groups with modify permissions: EMPTY; RPC SSL disabled
-26/07/02 05:12:54 INFO Executor: Starting executor ID driver on host ad99a099ab6a
-26/07/02 05:12:54 INFO Executor: OS info Linux, 6.18.33.1-microsoft-standard-WSL2, amd64
-26/07/02 05:12:54 INFO Executor: Java version 17.0.15
-26/07/02 05:12:54 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
-26/07/02 05:12:54 INFO Executor: Created or updated repl class loader org.apache.spark.util.MutableURLClassLoader@686a0492 for default.
-26/07/02 05:12:54 INFO Executor: Fetching file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO Utils: /tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar has been previously copied to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.postgresql_postgresql-42.7.1.jar
-26/07/02 05:12:54 INFO Executor: Fetching file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO Utils: /tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar has been previously copied to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.checkerframework_checker-qual-3.41.0.jar
-26/07/02 05:12:54 INFO Executor: Fetching spark://ad99a099ab6a:45825/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO TransportClientFactory: Successfully created connection to ad99a099ab6a/172.18.0.7:45825 after 29 ms (0 ms spent in bootstraps)
-26/07/02 05:12:54 INFO Utils: Fetching spark://ad99a099ab6a:45825/jars/org.postgresql_postgresql-42.7.1.jar to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/fetchFileTemp14268447690913158707.tmp
-26/07/02 05:12:54 INFO Utils: /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/fetchFileTemp14268447690913158707.tmp has been previously copied to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.postgresql_postgresql-42.7.1.jar
-26/07/02 05:12:54 INFO Executor: Adding file:/tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.postgresql_postgresql-42.7.1.jar to class loader default
-26/07/02 05:12:54 INFO Executor: Fetching spark://ad99a099ab6a:45825/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1782969173621
-26/07/02 05:12:54 INFO Utils: Fetching spark://ad99a099ab6a:45825/jars/org.checkerframework_checker-qual-3.41.0.jar to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/fetchFileTemp5717623157354938299.tmp
-26/07/02 05:12:54 INFO Utils: /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/fetchFileTemp5717623157354938299.tmp has been previously copied to /tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.checkerframework_checker-qual-3.41.0.jar
-26/07/02 05:12:54 INFO Executor: Adding file:/tmp/spark-4babb5f9-bf6c-47f4-aa67-917a4720265d/userFiles-c54f9af9-018a-43b6-ba73-09b23c7ac57e/org.checkerframework_checker-qual-3.41.0.jar to class loader default
-26/07/02 05:12:54 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 35029.
-26/07/02 05:12:54 INFO NettyBlockTransferService: Server created on ad99a099ab6a:35029
-26/07/02 05:12:54 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
-26/07/02 05:12:54 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, ad99a099ab6a, 35029, None)
-26/07/02 05:12:54 INFO BlockManagerMasterEndpoint: Registering block manager ad99a099ab6a:35029 with 434.4 MiB RAM, BlockManagerId(driver, ad99a099ab6a, 35029, None)
-26/07/02 05:12:54 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, ad99a099ab6a, 35029, None)
-26/07/02 05:12:54 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, ad99a099ab6a, 35029, None)
-2026-07-02T05:12:57 [INFO] batch_etl - Download 15 file CSV ke /tmp/batch_etl_jam_hhl9
-2026-07-02T05:12:57 [INFO] batch_etl - Membaca 15 file CSV dari lokal
-2026-07-02T05:13:02 [INFO] batch_etl - Jumlah baris terbaca: 131760
-2026-07-02T05:13:02 [INFO] batch_etl - Mulai cleaning data...
-2026-07-02T05:13:21 [INFO] batch_etl - DropNA: 131760 -> 131760 (hapus 0 karena null)
-2026-07-02T05:13:21 [INFO] batch_etl - Cleaning: 131760 -> 131760 (hapus 0)
-2026-07-02T05:13:22 [INFO] batch_etl - Agregasi harian: 1830 baris
-2026-07-02T05:13:22 [INFO] batch_etl - Menulis 1830 baris ke PostgreSQL tabel: daily_aqi
-26/07/02 05:13:22 WARN SparkStringUtils: Truncated the string representation of a plan since it was too large. This behavior can be adjusted by setting 'spark.sql.debug.maxToStringFields'.
-2026-07-02T05:13:26 [INFO] batch_etl - Insert 1830 baris ke daily_aqi (duplikat skip)
-2026-07-02T05:13:26 [INFO] batch_etl - Menulis 1830 baris ke MinIO: /tmp/batch_etl_jam_hhl9
-2026-07-02T05:14:37 [INFO] batch_etl - Berhasil upload daily_aqi ke MinIO
-2026-07-02T05:14:37 [INFO] batch_etl - Batch ETL selesai.
-2026-07-02T05:14:38 [INFO] batch_etl - Closing down clientserver connection
+26/07/03 02:36:30 INFO SparkContext: Running Spark version 4.0.0
+26/07/03 02:36:30 INFO SparkContext: OS info Linux, 6.18.33.1-microsoft-standard-WSL2, amd64
+26/07/03 02:36:30 INFO SparkContext: Java version 17.0.15
+26/07/03 02:36:30 INFO ResourceUtils: ==============================================================
+26/07/03 02:36:30 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/07/03 02:36:30 INFO ResourceUtils: ==============================================================
+26/07/03 02:36:30 INFO SparkContext: Submitted application: AQI-Watch-BatchETL
+26/07/03 02:36:30 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/07/03 02:36:30 INFO ResourceProfile: Limiting resource is cpu
+26/07/03 02:36:30 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/07/03 02:36:30 INFO SecurityManager: Changing view acls to: root,spark
+26/07/03 02:36:30 INFO SecurityManager: Changing modify acls to: root,spark
+26/07/03 02:36:30 INFO SecurityManager: Changing view acls groups to: root,spark
+26/07/03 02:36:30 INFO SecurityManager: Changing modify acls groups to: root,spark
+26/07/03 02:36:30 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root, spark groups with view permissions: EMPTY; users with modify permissions: root, spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/03 02:36:31 INFO Utils: Successfully started service 'sparkDriver' on port 33205.
+26/07/03 02:36:31 INFO SparkEnv: Registering MapOutputTracker
+26/07/03 02:36:31 INFO SparkEnv: Registering BlockManagerMaster
+26/07/03 02:36:31 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/07/03 02:36:31 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/07/03 02:36:31 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/07/03 02:36:31 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-a126e4b0-39af-474f-98cc-c4772ce52891
+26/07/03 02:36:31 INFO SparkEnv: Registering OutputCommitCoordinator
+26/07/03 02:36:31 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+26/07/03 02:36:31 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/07/03 02:36:31 INFO SparkContext: Added JAR file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar at spark://821739e20134:33205/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1783046190651
+26/07/03 02:36:31 INFO SparkContext: Added JAR file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar at spark://821739e20134:33205/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1783046190651
+26/07/03 02:36:31 INFO SparkContext: Added file file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar at file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1783046190651
+26/07/03 02:36:31 INFO Utils: Copying /tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.postgresql_postgresql-42.7.1.jar
+26/07/03 02:36:31 INFO SparkContext: Added file file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar at file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1783046190651
+26/07/03 02:36:31 INFO Utils: Copying /tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.checkerframework_checker-qual-3.41.0.jar
+26/07/03 02:36:31 INFO SecurityManager: Changing view acls to: root,spark
+26/07/03 02:36:31 INFO SecurityManager: Changing modify acls to: root,spark
+26/07/03 02:36:31 INFO SecurityManager: Changing view acls groups to: root,spark
+26/07/03 02:36:31 INFO SecurityManager: Changing modify acls groups to: root,spark
+26/07/03 02:36:31 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: root, spark groups with view permissions: EMPTY; users with modify permissions: root, spark; groups with modify permissions: EMPTY; RPC SSL disabled
+26/07/03 02:36:32 INFO Executor: Starting executor ID driver on host 821739e20134
+26/07/03 02:36:32 INFO Executor: OS info Linux, 6.18.33.1-microsoft-standard-WSL2, amd64
+26/07/03 02:36:32 INFO Executor: Java version 17.0.15
+26/07/03 02:36:32 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
+26/07/03 02:36:32 INFO Executor: Created or updated repl class loader org.apache.spark.util.MutableURLClassLoader@45c2e06b for default.
+26/07/03 02:36:32 INFO Executor: Fetching file:///tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1783046190651
+26/07/03 02:36:32 INFO Utils: /tmp/.ivy2/jars/org.postgresql_postgresql-42.7.1.jar has been previously copied to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.postgresql_postgresql-42.7.1.jar
+26/07/03 02:36:32 INFO Executor: Fetching file:///tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1783046190651
+26/07/03 02:36:32 INFO Utils: /tmp/.ivy2/jars/org.checkerframework_checker-qual-3.41.0.jar has been previously copied to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.checkerframework_checker-qual-3.41.0.jar
+26/07/03 02:36:32 INFO Executor: Fetching spark://821739e20134:33205/jars/org.checkerframework_checker-qual-3.41.0.jar with timestamp 1783046190651
+26/07/03 02:36:32 INFO TransportClientFactory: Successfully created connection to 821739e20134/172.18.0.8:33205 after 28 ms (0 ms spent in bootstraps)
+26/07/03 02:36:32 INFO Utils: Fetching spark://821739e20134:33205/jars/org.checkerframework_checker-qual-3.41.0.jar to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/fetchFileTemp7925636176883212649.tmp
+26/07/03 02:36:32 INFO Utils: /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/fetchFileTemp7925636176883212649.tmp has been previously copied to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.checkerframework_checker-qual-3.41.0.jar
+26/07/03 02:36:32 INFO Executor: Adding file:/tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.checkerframework_checker-qual-3.41.0.jar to class loader default
+26/07/03 02:36:32 INFO Executor: Fetching spark://821739e20134:33205/jars/org.postgresql_postgresql-42.7.1.jar with timestamp 1783046190651
+26/07/03 02:36:32 INFO Utils: Fetching spark://821739e20134:33205/jars/org.postgresql_postgresql-42.7.1.jar to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/fetchFileTemp611981641702354235.tmp
+26/07/03 02:36:32 INFO Utils: /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/fetchFileTemp611981641702354235.tmp has been previously copied to /tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.postgresql_postgresql-42.7.1.jar
+26/07/03 02:36:32 INFO Executor: Adding file:/tmp/spark-0a45e69a-b95f-4070-884b-b771c017e6dc/userFiles-e034bd5d-adec-43dd-a893-25408f2c9119/org.postgresql_postgresql-42.7.1.jar to class loader default
+26/07/03 02:36:32 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 39075.
+26/07/03 02:36:32 INFO NettyBlockTransferService: Server created on 821739e20134:39075
+26/07/03 02:36:32 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/07/03 02:36:32 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, 821739e20134, 39075, None)
+26/07/03 02:36:32 INFO BlockManagerMasterEndpoint: Registering block manager 821739e20134:39075 with 434.4 MiB RAM, BlockManagerId(driver, 821739e20134, 39075, None)
+26/07/03 02:36:32 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, 821739e20134, 39075, None)
+26/07/03 02:36:32 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, 821739e20134, 39075, None)
+2026-07-03T02:36:36 [INFO] batch_etl - Download 55 file CSV ke /tmp/batch_etl_zaq2d4v9
+2026-07-03T02:36:36 [INFO] batch_etl - Membaca 55 file CSV dari lokal
+2026-07-03T02:36:47 [INFO] batch_etl - Jumlah baris terbaca: 483120
+2026-07-03T02:36:48 [INFO] batch_etl - Mulai cleaning data...
+26/07/03 02:37:45 WARN DAGScheduler: Broadcasting large task binary with size 1167.0 KiB
+26/07/03 02:37:48 WARN DAGScheduler: Broadcasting large task binary with size 1174.7 KiB
+26/07/03 02:37:48 WARN DAGScheduler: Broadcasting large task binary with size 1174.7 KiB
+2026-07-03T02:37:49 [INFO] batch_etl - DropNA: 483120 -> 483120 (hapus 0 karena null)
+26/07/03 02:37:49 WARN DAGScheduler: Broadcasting large task binary with size 1174.7 KiB
+2026-07-03T02:37:49 [INFO] batch_etl - Cleaning: 483120 -> 483120 (hapus 0)
+26/07/03 02:37:49 WARN DAGScheduler: Broadcasting large task binary with size 1174.7 KiB
+26/07/03 02:37:50 WARN DAGScheduler: Broadcasting large task binary with size 1186.1 KiB
+2026-07-03T02:37:52 [INFO] batch_etl - Agregasi harian: 1835 baris
+26/07/03 02:37:52 WARN DAGScheduler: Broadcasting large task binary with size 1186.1 KiB
+2026-07-03T02:37:53 [INFO] batch_etl - Menulis 1835 baris ke PostgreSQL tabel: daily_aqi
+26/07/03 02:37:53 WARN SparkStringUtils: Truncated the string representation of a plan since it was too large. This behavior can be adjusted by setting 'spark.sql.debug.maxToStringFields'.
+26/07/03 02:37:53 WARN DAGScheduler: Broadcasting large task binary with size 1197.5 KiB
+2026-07-03T02:38:02 [INFO] batch_etl - Insert 1835 baris ke daily_aqi (duplikat skip)
+26/07/03 02:38:02 WARN DAGScheduler: Broadcasting large task binary with size 1186.1 KiB
+2026-07-03T02:38:03 [INFO] batch_etl - Menulis 1835 baris ke MinIO: /tmp/batch_etl_zaq2d4v9
+26/07/03 02:38:03 WARN DAGScheduler: Broadcasting large task binary with size 1197.5 KiB
+2026-07-03T02:39:20 [INFO] batch_etl - Berhasil upload daily_aqi ke MinIO
+2026-07-03T02:39:20 [INFO] batch_etl - Batch ETL selesai.
+2026-07-03T02:39:20 [INFO] batch_etl - Closing down clientserver connection
