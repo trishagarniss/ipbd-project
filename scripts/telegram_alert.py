@@ -49,7 +49,7 @@ def get_today_aqi():
     query = """
         SELECT station_id, date, pm25_avg, pm10_avg, ispu, aqi_category
         FROM daily_aqi
-        WHERE date = CURRENT_DATE
+        WHERE date = (NOW() AT TIME ZONE 'Asia/Jakarta')::date
         ORDER BY station_id
     """
     conn = psycopg2.connect(**POSTGRES_CONFIG)

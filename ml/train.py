@@ -13,6 +13,7 @@ from sklearn.metrics import (
     f1_score, classification_report, confusion_matrix
 )
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+from imblearn.over_sampling import SMOTE
 import mlflow
 import mlflow.sklearn
 import boto3
@@ -158,6 +159,11 @@ def train_rf(X_train, X_test, y_train, y_test, feature_cols):
     y_train_enc = le.transform(y_train)
     y_test_enc  = le.transform(y_test)
 
+    smote = SMOTE(random_state=42, k_neighbors=1)
+    X_train_res, y_train_res = smote.fit_resample(X_train, y_train_enc)
+    log.info("SMOTE: %d -> %d samples, distribusi: %s", len(X_train), len(X_train_res),
+             dict(zip(*np.unique(y_train_res, return_counts=True))))
+
     param_grid = {
         "n_estimators": [100, 200],
         "max_depth": [10, 20, None],
@@ -168,7 +174,7 @@ def train_rf(X_train, X_test, y_train, y_test, feature_cols):
     grid = GridSearchCV(
         rf, param_grid, cv=3, scoring="f1_weighted", n_jobs=-1, verbose=0
     )
-    grid.fit(X_train, y_train_enc)
+    grid.fit(X_train_res, y_train_res)
 
     best_rf = grid.best_estimator_
     y_pred_enc = best_rf.predict(X_test)

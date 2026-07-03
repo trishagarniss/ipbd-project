@@ -1,11 +1,11 @@
-=== ML PREDICT 2026-07-02 23:55:12 ===
-2026-07-02T23:55:16 [INFO] predict - Batch Predict mulai...
-2026-07-02T23:55:18 [INFO] predict - Found credentials in environment variables.
-2026-07-02T23:55:25 [INFO] predict - Model 'aqi-classifier' Production berhasil di-load.
+=== ML PREDICT 2026-07-03 09:02:53 ===
+2026-07-03T09:02:58 [INFO] predict - Batch Predict mulai...
+2026-07-03T09:02:59 [INFO] predict - Found credentials in environment variables.
+2026-07-03T09:03:09 [INFO] predict - Model 'aqi-classifier' Production berhasil di-load.
 D:\Kuliah\S4\project\ipbd-project\ml\predict.py:81: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
   df = pd.read_sql(query, conn)
-2026-07-02T23:55:26 [INFO] predict - Loaded 40 rows untuk prediksi
-2026-07-02T23:55:26 [INFO] predict - Latest records: 5 stations
-2026-07-02T23:55:26 [INFO] predict - Predictions: [2 2 2 2 2]
-2026-07-02T23:55:26 [INFO] predict - Disimpan 5 prediksi ke PostgreSQL
-2026-07-02T23:55:26 [INFO] predict - Batch Predict selesai.
+2026-07-03T09:03:09 [INFO] predict - Loaded 35 rows untuk prediksi
+2026-07-03T09:03:09 [INFO] predict - Latest records: 5 stations
+2026-07-03T09:03:09 [INFO] predict - Predictions: [3 3 3 3 3]
+2026-07-03T09:03:09 [INFO] predict - Disimpan 5 prediksi ke PostgreSQL
+2026-07-03T09:03:09 [INFO] predict - Batch Predict selesai.
