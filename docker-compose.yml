@@ -12,6 +12,7 @@ x-airflow-common:
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
+    AIRFLOW_CONN_AQI_POSTGRES: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark apache-airflow-providers-telegram scikit-learn pandas numpy scipy mlflow psycopg2-binary python-dotenv boto3 requests pyspark"
   volumes:
     - ./airflow/dags:/opt/airflow/dags
@@ -19,6 +20,7 @@ x-airflow-common:
     - ./airflow/plugins:/opt/airflow/plugins
     - ./spark:/opt/airflow/spark
     - ./ml:/opt/ml
+    - ./config:/opt/airflow/config
   networks:
     - aqi-net
   depends_on:
@@ -200,7 +202,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
       MLFLOW_DEFAULT_ARTIFACT_ROOT: s3://mlflow/
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}

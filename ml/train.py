@@ -23,14 +23,14 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 log = logging.getLogger(__name__)
 
 POSTGRES_CONFIG = {
-    "host":     os.getenv("POSTGRES_HOST", "localhost"),
+    "host":     os.getenv("POSTGRES_HOST", "postgres"),
     "port":     int(os.getenv("POSTGRES_PORT", 5432)),
     "dbname":   os.getenv("POSTGRES_DB", "aqi_db"),
     "user":     os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
 
-MLFLOW_URI      = os.getenv("MLFLOW_URI", "http://localhost:5000")
+MLFLOW_URI      = os.getenv("MLFLOW_URI", "http://mlflow:5000")
 MLFLOW_EXPERIMENT = "aqi-classifier"
 MODEL_NAME        = "aqi-classifier"
 

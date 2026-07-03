@@ -11,7 +11,9 @@ import requests
 import boto3
 from botocore.config import Config as BotoConfig
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ml"))
+sys.path.insert(0, "/opt/ml")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from ispu import compute_ispu
 
 log = logging.getLogger(__name__)

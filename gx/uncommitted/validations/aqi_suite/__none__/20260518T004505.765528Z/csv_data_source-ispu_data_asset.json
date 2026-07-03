@@ -1,0 +1,297 @@
+{
+  "id": null,
+  "meta": {
+    "active_batch_definition": {
+      "batch_identifiers": {},
+      "data_asset_name": "ispu_data_asset",
+      "data_connector_name": "fluent",
+      "datasource_name": "csv_data_source"
+    },
+    "batch_markers": {
+      "ge_load_time": "20260518T004505.417987Z",
+      "pandas_data_fingerprint": "8a435548414183551ada3e6dfaedec34"
+    },
+    "batch_parameters": null,
+    "batch_spec": {
+      "reader_method": "read_csv",
+      "reader_options": {
+        "filepath_or_buffer": "/opt/airflow/data/ispu_jakarta_historis.csv"
+      }
+    },
+    "checkpoint_id": null,
+    "great_expectations_version": "1.1.0",
+    "validation_id": "d0f68564-3bfb-4aa1-b690-eb7fea7a66cf"
+  },
+  "results": [
+    {
+      "exception_info": {
+        "exception_message": null,
+        "exception_traceback": null,
+        "raised_exception": false
+      },
+      "expectation_config": {
+        "id": "52d24735-3af6-496e-bf20-9c5703c6dfeb",
+        "kwargs": {
+          "batch_id": "csv_data_source-ispu_data_asset",
+          "column": "value"
+        },
+        "meta": {
+          "severity": "critical"
+        },
+        "type": "expect_column_values_to_not_be_null"
+      },
+      "meta": {},
+      "result": {
+        "element_count": 1090,
+        "partial_unexpected_counts": [
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          },
+          {
+            "count": 1,
+            "value": null
+          }
+        ],
+        "partial_unexpected_index_list": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27
+        ],
+        "partial_unexpected_list": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "unexpected_count": 121,
+        "unexpected_percent": 11.100917431192661
+      },
+      "success": false
+    },
+    {
+      "exception_info": {
+        "exception_message": null,
+        "exception_traceback": null,
+        "raised_exception": false
+      },
+      "expectation_config": {
+        "id": "d559d07f-5a84-47b2-91b7-415685538ab9",
+        "kwargs": {
+          "batch_id": "csv_data_source-ispu_data_asset",
+          "column": "value",
+          "max_value": 500.0,
+          "min_value": 0.0
+        },
+        "meta": {
+          "severity": "critical"
+        },
+        "type": "expect_column_values_to_be_between"
+      },
+      "meta": {},
+      "result": {
+        "element_count": 1090,
+        "missing_count": 121,
+        "missing_percent": 11.100917431192661,
+        "partial_unexpected_counts": [
+          {
+            "count": 1,
+            "value": 539.3333384195963
+          },
+          {
+            "count": 1,
+            "value": 662.5482114156088
+          }
+        ],
+        "partial_unexpected_index_list": [
+          914,
+          1029
+        ],
+        "partial_unexpected_list": [
+          662.5482114156088,
+          539.3333384195963
+        ],
+        "unexpected_count": 2,
+        "unexpected_percent": 0.20639834881320948,
+        "unexpected_percent_nonmissing": 0.20639834881320948,
+        "unexpected_percent_total": 0.1834862385321101
+      },
+      "success": false
+    },
+    {
+      "exception_info": {
+        "exception_message": null,
+        "exception_traceback": null,
+        "raised_exception": false
+      },
+      "expectation_config": {
+        "id": "f70556fd-5679-4c7d-b843-791af8b1de9c",
+        "kwargs": {
+          "batch_id": "csv_data_source-ispu_data_asset",
+          "column": "measured_at"
+        },
+        "meta": {
+          "severity": "critical"
+        },
+        "type": "expect_column_values_to_not_be_null"
+      },
+      "meta": {},
+      "result": {
+        "element_count": 1090,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": [],
+        "partial_unexpected_list": [],
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0
+      },
+      "success": true
+    },
+    {
+      "exception_info": {
+        "exception_message": null,
+        "exception_traceback": null,
+        "raised_exception": false
+      },
+      "expectation_config": {
+        "id": "34c12f8c-b974-49ba-8eae-da1be0c3f1e6",
+        "kwargs": {
+          "batch_id": "csv_data_source-ispu_data_asset",
+          "column": "measured_at",
+          "type_": "str"
+        },
+        "meta": {
+          "severity": "critical"
+        },
+        "type": "expect_column_values_to_be_of_type"
+      },
+      "meta": {},
+      "result": {
+        "element_count": 1090,
+        "missing_count": 0,
+        "missing_percent": 0.0,
+        "partial_unexpected_counts": [],
+        "partial_unexpected_index_list": [],
+        "partial_unexpected_list": [],
+        "unexpected_count": 0,
+        "unexpected_percent": 0.0,
+        "unexpected_percent_nonmissing": 0.0,
+        "unexpected_percent_total": 0.0
+      },
+      "success": true
+    }
+  ],
+  "statistics": {
+    "evaluated_expectations": 4,
+    "success_percent": 50.0,
+    "successful_expectations": 2,
+    "unsuccessful_expectations": 2
+  },
+  "success": false,
+  "suite_name": "aqi_suite",
+  "suite_parameters": {}
+}
