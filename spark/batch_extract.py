@@ -4,8 +4,10 @@ import json
 import csv
 import io
 import logging
+import argparse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 import boto3
@@ -69,14 +71,14 @@ def ensure_bucket(s3, bucket):
         log.info("Bucket '%s' dibuat", bucket)
 
 
-def _date_range():
+def _date_range(days):
     end = datetime.now(timezone.utc)
-    start = end - timedelta(days=HISTORICAL_DAYS)
+    start = end - timedelta(days=days)
     return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
 
 
-def fetch_hourly_air_quality(lat, lon):
-    start_date, end_date = _date_range()
+def fetch_hourly_air_quality(lat, lon, days):
+    start_date, end_date = _date_range(days)
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -90,7 +92,7 @@ def fetch_hourly_air_quality(lat, lon):
         "timezone": "auto",
     }
     try:
-        resp = requests.get(AIR_QUALITY_URL, params=params, timeout=60)
+        resp = requests.get(AIR_QUALITY_URL, params=params, timeout=120)
         if resp.status_code != 200:
             log.warning("Air quality API returned %d for (%.4f,%.4f)", resp.status_code, lat, lon)
             return None
@@ -100,8 +102,8 @@ def fetch_hourly_air_quality(lat, lon):
         return None
 
 
-def fetch_hourly_weather(lat, lon):
-    start_date, end_date = _date_range()
+def fetch_hourly_weather(lat, lon, days):
+    start_date, end_date = _date_range(days)
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -114,7 +116,7 @@ def fetch_hourly_weather(lat, lon):
         "timezone": "auto",
     }
     try:
-        resp = requests.get(WEATHER_ARCHIVE_URL, params=params, timeout=60)
+        resp = requests.get(WEATHER_ARCHIVE_URL, params=params, timeout=120)
         if resp.status_code != 200:
             log.warning("Weather archive API returned %d for (%.4f,%.4f)", resp.status_code, lat, lon)
             return None
@@ -201,10 +203,7 @@ def upload_csv_to_minio(s3, station, rows):
     writer.writeheader()
     writer.writerows(rows)
 
-    now = datetime.now(timezone.utc)
-    date_str = now.strftime("%Y-%m-%d")
-    timestamp = now.strftime("%Y%m%d%H%M%S")
-    key = f"{date_str}/batch_{station['id']}_{timestamp}.csv"
+    key = f"batch_{station['id']}.csv"
 
     s3.put_object(
         Bucket=MINIO_BUCKET_RAW,
@@ -215,8 +214,22 @@ def upload_csv_to_minio(s3, station, rows):
     log.info("Uploaded %s (%d rows, %.1f KB)", key, len(rows), len(buf.getvalue()) / 1024)
 
 
+def process_station(station, s3, days):
+    log.info("Fetching %s (%s)...", station["id"], station["name"])
+    aq = fetch_hourly_air_quality(station["latitude"], station["longitude"], days)
+    wx = fetch_hourly_weather(station["latitude"], station["longitude"], days)
+    rows = build_csv_rows(station, aq, wx)
+    upload_csv_to_minio(s3, station, rows)
+    return len(rows)
+
+
 def main():
     setup_logging()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--days", type=int, default=365,
+                        help="Jumlah hari data yang diambil (default: 365)")
+    args = parser.parse_args()
 
     env_path = "/opt/airflow/.env"
     if os.path.exists(env_path):
@@ -225,20 +238,26 @@ def main():
     else:
         log.warning(".env not found at %s, using defaults", env_path)
 
-    log.info("Batch Extract mulai...")
+    log.info("Batch Extract mulai — mengambil %d hari terakhir", args.days)
 
     locations = load_locations()
     s3 = create_minio_client()
     ensure_bucket(s3, MINIO_BUCKET_RAW)
 
     total_rows = 0
-    for station in locations:
-        log.info("Fetching data for %s (%s)...", station["id"], station["name"])
-        aq = fetch_hourly_air_quality(station["latitude"], station["longitude"])
-        wx = fetch_hourly_weather(station["latitude"], station["longitude"])
-        rows = build_csv_rows(station, aq, wx)
-        upload_csv_to_minio(s3, station, rows)
-        total_rows += len(rows)
+    with ThreadPoolExecutor(max_workers=len(locations)) as executor:
+        futures = {
+            executor.submit(process_station, st, s3, args.days): st["id"]
+            for st in locations
+        }
+        for future in as_completed(futures):
+            sid = futures[future]
+            try:
+                n = future.result()
+                total_rows += n
+                log.info("Selesai %s: %d rows", sid, n)
+            except Exception as e:
+                log.error("Gagal memproses %s: %s", sid, e)
 
     log.info("Batch Extract selesai — total %d rows", total_rows)
 

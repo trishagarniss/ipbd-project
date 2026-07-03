@@ -1,8 +1,28 @@
 import os
 import sys
+import subprocess as _sp
+import importlib as _il
 import tempfile
 import logging
 from datetime import datetime
+from typing import List
+
+
+def _ensure_deps():
+    for pkg, mod_name in [
+        ("boto3", "boto3"),
+        ("psycopg2-binary", "psycopg2"),
+    ]:
+        try:
+            _il.import_module(mod_name)
+        except ImportError:
+            _sp.check_call(
+                [sys.executable, "-m", "pip", "install", pkg, "--quiet"],
+                stderr=_sp.DEVNULL,
+            )
+
+
+_ensure_deps()
 
 import boto3
 from botocore.config import Config
@@ -74,7 +94,7 @@ def create_spark_session() -> SparkSession:
     )
 
 
-def _download_raw_csvs(spark: SparkSession, tmp_dir: str) -> list[str]:
+def _download_raw_csvs(spark: SparkSession, tmp_dir: str) -> List[str]:
     s3 = _get_minio_bucket(RAW_BUCKET)
     resp = s3.list_objects_v2(Bucket=RAW_BUCKET)
     if "Contents" not in resp:
@@ -94,7 +114,7 @@ def _download_raw_csvs(spark: SparkSession, tmp_dir: str) -> list[str]:
     return local_files
 
 
-def read_raw_csv(spark: SparkSession, input_files: list[str]):
+def read_raw_csv(spark: SparkSession, input_files: List[str]):
     schema = StructType([
         StructField("station_id",  StringType(), True),
         StructField("station_name", StringType(), True),
@@ -286,6 +306,15 @@ def write_to_minio(spark: SparkSession, df, tmp_dir: str):
     log.info("Berhasil upload daily_aqi ke MinIO")
 
 
+def _resolve_raw_dir():
+    for i, arg in enumerate(sys.argv):
+        if arg == "--raw-dir" and i + 1 < len(sys.argv):
+            d = sys.argv[i + 1]
+            if os.path.isdir(d):
+                return d
+    return None
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -293,11 +322,34 @@ def main():
         datefmt="%Y-%m-%dT%H:%M:%S"
     )
     logging.getLogger("urllib3").setLevel(logging.ERROR)
-    date_str = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y-%m-%d")
     log.info("Batch ETL mulai...")
 
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
+
+    raw_dir = _resolve_raw_dir()
+
+    if raw_dir:
+        log.info("Membaca CSV dari direktori: %s", raw_dir)
+        input_files = sorted([
+            os.path.join(raw_dir, f)
+            for f in os.listdir(raw_dir)
+            if f.endswith(".csv")
+        ])
+        if not input_files:
+            log.warning("Tidak ada .csv di %s — ETL dihentikan", raw_dir)
+            return
+        df_raw = read_raw_csv(spark, input_files)
+        if df_raw.count() == 0:
+            log.warning("Data kosong — ETL dihentikan")
+            return
+        df_clean = clean_data(df_raw)
+        df_aqi = calculate_aqi_category(df_clean)
+        df_daily = aggregate_daily(df_aqi)
+        df_daily = calculate_aqi_category(df_daily)
+        write_to_postgres(df_daily, "daily_aqi")
+        log.info("Batch ETL selesai (mode Airflow).")
+        return
 
     with tempfile.TemporaryDirectory(prefix="batch_etl_") as tmp_dir:
         input_files = _download_raw_csvs(spark, tmp_dir)
@@ -314,7 +366,7 @@ def main():
         write_to_postgres(df_daily, "daily_aqi")
         write_to_minio(spark, df_daily, tmp_dir)
 
-        log.info("Batch ETL selesai.")
+        log.info("Batch ETL selesai (standalone).")
 
 
 if __name__ == "__main__":

@@ -5,11 +5,12 @@ import os
 import subprocess
 import time
 import requests
+import boto3
+from botocore.config import Config as BotoConfig
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 log = logging.getLogger(__name__)
 
@@ -119,6 +120,60 @@ def _run_batch_extract(**context):
     log.info("batch_extract selesai dalam %.2f detik.", elapsed)
 
 
+def _download_csvs():
+    raw_dir = os.path.join(SPARK_DIR, "raw_csvs")
+    os.makedirs(raw_dir, exist_ok=True)
+
+    for f in os.listdir(raw_dir):
+        os.remove(os.path.join(raw_dir, f))
+
+    minio_ep = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
+    use_ssl = minio_ep.startswith("https")
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=minio_ep,
+        aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+        aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "admin123"),
+        use_ssl=use_ssl,
+        config=BotoConfig(signature_version="s3v4", retries={"max_attempts": 3}),
+        region_name="us-east-1",
+    )
+
+    resp = s3.list_objects_v2(Bucket="raw")
+    if "Contents" not in resp:
+        log.warning("Bucket raw kosong")
+        return raw_dir
+
+    keys = [obj["Key"] for obj in resp["Contents"] if obj["Key"].endswith(".csv")]
+    if not keys:
+        log.warning("Tidak ada file .csv di bucket raw")
+        return raw_dir
+
+    for key in keys:
+        local = os.path.join(raw_dir, os.path.basename(key))
+        s3.download_file("raw", key, local)
+        log.info("Downloaded %s -> %s", key, local)
+
+    log.info("Download %d CSV ke %s", len(keys), raw_dir)
+    return raw_dir
+
+
+def _run_batch_etl(**context):
+    raw_dir = _download_csvs()
+
+    script = os.path.join(SPARK_DIR, "batch_etl.py")
+    cmd = [sys.executable, script, "--raw-dir", raw_dir]
+    log.info("Running batch_etl (local mode): %s", " ".join(cmd))
+    t0 = time.time()
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+    elapsed = time.time() - t0
+    log.info("stdout:\n%s", result.stdout)
+    if result.returncode != 0:
+        log.error("stderr:\n%s", result.stderr)
+        raise RuntimeError(f"batch_etl gagal: {result.stderr}")
+    log.info("batch_etl selesai dalam %.2f detik.", elapsed)
+
+
 with DAG(
     dag_id="batch_ingest",
     default_args=DEFAULT_ARGS,
@@ -143,17 +198,10 @@ with DAG(
         provide_context=True,
     )
 
-    etl = SparkSubmitOperator(
+    etl = PythonOperator(
         task_id="batch_etl",
-        application=f"{SPARK_DIR}/batch_etl.py",
-        conn_id="spark_default",
-        conf={
-            "spark.sql.ansi.enabled": "false",
-            "spark.sql.shuffle.partitions": "4",
-        },
-        packages="org.postgresql:postgresql:42.7.1",
-        executor_memory="1g",
-        driver_memory="512m",
+        python_callable=_run_batch_etl,
+        provide_context=True,
     )
 
     audit_success = PythonOperator(

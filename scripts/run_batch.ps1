@@ -3,7 +3,7 @@ param(
     [switch]$SkipTelegram
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $logDir = "docs/logs"
 $projectRoot = Resolve-Path "$PSScriptRoot/.."
 
@@ -83,12 +83,7 @@ for ($i = 1; $i -le $Count; $i++) {
     "=== BATCH ETL RUN #${i} $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $etlLog
 
     $t0 = Get-Date
-    docker compose exec -u root spark-master pip install boto3 botocore psycopg2-binary 2>&1 | Out-Null
-    docker compose exec -u root spark-master spark-submit `
-        --packages org.postgresql:postgresql:42.7.1 `
-        --conf spark.sql.ansi.enabled=false `
-        --conf spark.jars.ivy=/tmp/.ivy2 `
-        /opt/airflow/spark/batch_etl.py 2>&1 | Add-Content $etlLog
+    docker compose exec airflow-scheduler python /opt/airflow/spark/batch_etl.py 2>&1 | Add-Content $etlLog
     $t1 = Get-Date
 
     $durEtl = [math]::Round(($t1 - $t0).TotalSeconds)
