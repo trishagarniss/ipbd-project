@@ -1,6 +1,8 @@
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.7.2
+  build:
+    context: ./build
+    dockerfile: Dockerfile.airflow
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -8,18 +10,21 @@ x-airflow-common:
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__LOGGING_LEVEL: INFO
-    PIP_CONSTRAINT: "https://raw.githubusercontent.com/apache/airflow/constraints-2.7.2/constraints-3.8.txt"
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
-    _PIP_ADDITIONAL_REQUIREMENTS: ""
+    MINIO_ENDPOINT: http://minio:9000
+    MLFLOW_URI: http://mlflow:5000
   volumes:
     - ./.env:/opt/airflow/.env
+    - ./.env:/opt/.env
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
     - ./spark:/opt/airflow/spark
     - ./ml:/opt/ml
+    - ./ml:/opt/airflow/ml
+    - ./config:/opt/airflow/config
   networks:
     - aqi-net
   depends_on:
