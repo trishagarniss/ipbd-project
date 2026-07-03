@@ -1,29 +1,28 @@
-=== ML TRAIN #1 2026-07-03 09:38:11 ===
-2026-07-03T09:38:22 [INFO] train - ML Training mulai...
+=== ML TRAIN #1 2026-07-03 09:48:02 ===
+2026-07-03T09:48:09 [INFO] train - ML Training mulai...
 D:\Kuliah\S4\project\ipbd-project\ml\train.py:74: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
   df = pd.read_sql(query, conn, params=(f"{days} days",))
-2026-07-03T09:38:24 [INFO] train - Loaded 1835 rows from daily_aqi
-2026-07-03T09:38:24 [INFO] train - Engineering features...
-2026-07-03T09:38:24 [INFO] train - Feature shape: (1835, 36)
-2026-07-03T09:38:24 [INFO] train - Train: 1765, Test: 35
-2026-07-03T09:38:24 [INFO] train - Feature columns: ['pm25_avg', 'pm10_avg', 'co_avg', 'no2_avg', 'so2_avg', 'o3_avg', 'ispu', 'temperature_avg', 'humidity_avg', 'wind_speed_avg', 'precipitation_sum', 'cloud_cover_avg', 'record_count', 'station_encoded', 'pm25_avg_lag_1', 'pm25_avg_lag_3', 'pm25_avg_lag_7', 'pm10_avg_lag_1', 'pm10_avg_lag_7', 'co_avg_lag_1', 'co_avg_lag_7', 'temperature_avg_lag_1', 'temperature_avg_lag_7', 'humidity_avg_lag_1', 'humidity_avg_lag_7', 'pm25_avg_roll_3', 'pm10_avg_roll_3', 'ispu_roll_3', 'ispu_roll_7', 'month', 'day_of_week', 'is_weekend', 'day_of_month']
-2026-07-03T09:38:24 [INFO] train - Training Random Forest classifier...
-2026-07-03T09:38:29 [INFO] train - SMOTE: 1765 -> 3240 samples, distribusi: {np.int64(0): np.int64(810), np.int64(2): np.int64(810), np.int64(3): np.int64(810), np.int64(4): np.int64(810)}
-2026-07-03T09:38:44 [INFO] train - RF best params: {'max_depth': 10, 'min_samples_split': 5, 'n_estimators': 200}
-2026-07-03T09:38:44 [INFO] train - RF accuracy: 0.9143, f1: 0.9549
-2026-07-03T09:38:44 [INFO] train - Classification report:
-                    precision    recall  f1-score   support
+2026-07-03T09:48:10 [INFO] train - Loaded 1835 rows from daily_aqi
+2026-07-03T09:48:10 [INFO] train - Engineering features...
+2026-07-03T09:48:10 [INFO] train - Feature shape: (1835, 36)
+2026-07-03T09:48:10 [INFO] train - Train: 1765, Test: 35
+2026-07-03T09:48:10 [INFO] train - Feature columns: ['pm25_avg', 'pm10_avg', 'co_avg', 'no2_avg', 'so2_avg', 'o3_avg', 'ispu', 'temperature_avg', 'humidity_avg', 'wind_speed_avg', 'precipitation_sum', 'cloud_cover_avg', 'record_count', 'station_encoded', 'pm25_avg_lag_1', 'pm25_avg_lag_3', 'pm25_avg_lag_7', 'pm10_avg_lag_1', 'pm10_avg_lag_7', 'co_avg_lag_1', 'co_avg_lag_7', 'temperature_avg_lag_1', 'temperature_avg_lag_7', 'humidity_avg_lag_1', 'humidity_avg_lag_7', 'pm25_avg_roll_3', 'pm10_avg_roll_3', 'ispu_roll_3', 'ispu_roll_7', 'month', 'day_of_week', 'is_weekend', 'day_of_month']
+2026-07-03T09:48:10 [INFO] train - Training Random Forest classifier...
+2026-07-03T09:48:16 [INFO] train - SMOTE: 1765 -> 3390 samples, distribusi: {np.int64(0): np.int64(1130), np.int64(3): np.int64(1130), np.int64(4): np.int64(1130)}
+2026-07-03T09:48:28 [INFO] train - RF best params: {'max_depth': 10, 'min_samples_split': 2, 'n_estimators': 100}
+2026-07-03T09:48:28 [INFO] train - RF accuracy: 1.0000, f1: 1.0000
+2026-07-03T09:48:28 [INFO] train - Classification report:
+              precision    recall  f1-score   support
 
-Sangat Tidak Sehat       1.00      1.00      1.00         5
-            Sedang       1.00      0.90      0.95        30
-       Tidak Sehat       0.00      0.00      0.00         0
+      Sedang       1.00      1.00      1.00        25
+ Tidak Sehat       1.00      1.00      1.00        10
 
-          accuracy                           0.91        35
-         macro avg       0.67      0.63      0.65        35
-      weighted avg       1.00      0.91      0.95        35
+    accuracy                           1.00        35
+   macro avg       1.00      1.00      1.00        35
+weighted avg       1.00      1.00      1.00        35
 
-2026-07-03T09:38:44 [INFO] train - Training KMeans clustering...
-2026-07-03T09:38:44 [INFO] train - KMeans clusters:
+2026-07-03T09:48:28 [INFO] train - Training KMeans clustering...
+2026-07-03T09:48:28 [INFO] train - KMeans clusters:
             cluster
 station_id         
 SKA1              1
@@ -31,23 +30,23 @@ SKA2              0
 SKA3              1
 SKA4              2
 SKA5              1
-2026/07/03 09:38:45 WARNING mlflow.models.model: `artifact_path` is deprecated. Please use `name` instead.
-2026/07/03 09:38:45 INFO mlflow.utils.uv_utils: Detected uv project: found uv.lock and pyproject.toml in D:\Kuliah\S4\project\ipbd-project
-2026/07/03 09:38:51 INFO mlflow.utils.uv_utils: Detected uv project: found uv.lock and pyproject.toml in D:\Kuliah\S4\project\ipbd-project
-2026/07/03 09:38:51 INFO mlflow.utils.environment: Detected uv project at D:\Kuliah\S4\project\ipbd-project. Attempting to export requirements via 'uv export'.
-2026/07/03 09:38:51 INFO mlflow.utils.uv_utils: Exported 0 dependencies via uv
-2026/07/03 09:38:51 WARNING mlflow.utils.environment: uv export failed or returned no requirements. Falling back to package capture based inference.
-2026/07/03 09:39:07 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
-2026-07-03T09:39:07 [INFO] train - Found credentials in environment variables.
+2026/07/03 09:48:29 WARNING mlflow.models.model: `artifact_path` is deprecated. Please use `name` instead.
+2026/07/03 09:48:29 INFO mlflow.utils.uv_utils: Detected uv project: found uv.lock and pyproject.toml in D:\Kuliah\S4\project\ipbd-project
+2026/07/03 09:48:34 INFO mlflow.utils.uv_utils: Detected uv project: found uv.lock and pyproject.toml in D:\Kuliah\S4\project\ipbd-project
+2026/07/03 09:48:34 INFO mlflow.utils.environment: Detected uv project at D:\Kuliah\S4\project\ipbd-project. Attempting to export requirements via 'uv export'.
+2026/07/03 09:48:34 INFO mlflow.utils.uv_utils: Exported 0 dependencies via uv
+2026/07/03 09:48:34 WARNING mlflow.utils.environment: uv export failed or returned no requirements. Falling back to package capture based inference.
+2026/07/03 09:48:50 WARNING mlflow.utils.environment: Failed to resolve installed pip version. ``pip`` will be added to conda.yaml environment spec without a version specifier.
+2026-07-03T09:48:51 [INFO] train - Found credentials in environment variables.
 Registered model 'aqi-classifier' already exists. Creating a new version of this model...
-2026/07/03 09:39:08 WARNING mlflow.tracking._model_registry.fluent: Run with id cfe2234dfec447b19ea36257e1d65ea6 has no artifacts at artifact path 'model', registering model based on models:/m-ade326cdfbf2401ea7ba6f7f27c0672e instead
-2026/07/03 09:39:09 INFO mlflow.store.model_registry.abstract_store: Waiting up to 300 seconds for model version to finish creation. Model name: aqi-classifier, version 13
-Created version '13' of model 'aqi-classifier'.
+2026/07/03 09:48:51 WARNING mlflow.tracking._model_registry.fluent: Run with id f0c8e454d2264c02bd68d79c09332d24 has no artifacts at artifact path 'model', registering model based on models:/m-2eb59e19922d40d0a48c6eeed5ec4280 instead
+2026/07/03 09:48:52 INFO mlflow.store.model_registry.abstract_store: Waiting up to 300 seconds for model version to finish creation. Model name: aqi-classifier, version 14
+Created version '14' of model 'aqi-classifier'.
 D:\Kuliah\S4\project\ipbd-project\ml\train.py:299: FutureWarning: ``mlflow.tracking.client.MlflowClient.transition_model_version_stage`` is deprecated since 2.9.0. Model registry stages will be removed in a future major release. To learn more about the deprecation of model registry stages, see our migration guide here: https://mlflow.org/docs/latest/model-registry.html#migrating-from-stages
   mlflow.tracking.MlflowClient().transition_model_version_stage(
-2026-07-03T09:39:09 [INFO] train - Model version 13 -> stage Production
-2026-07-03T09:39:09 [INFO] train - Run ID: cfe2234dfec447b19ea36257e1d65ea6
-2026-07-03T09:39:09 [INFO] train - Model 'aqi-classifier' logged & registered ke MLflow.
-2026-07-03T09:39:09 [INFO] train - ML Training selesai.
-­ƒÅâ View run train_20260703_093823 at: http://localhost:5000/#/experiments/1/runs/cfe2234dfec447b19ea36257e1d65ea6
+2026-07-03T09:48:52 [INFO] train - Model version 14 -> stage Production
+2026-07-03T09:48:52 [INFO] train - Run ID: f0c8e454d2264c02bd68d79c09332d24
+2026-07-03T09:48:52 [INFO] train - Model 'aqi-classifier' logged & registered ke MLflow.
+2026-07-03T09:48:52 [INFO] train - ML Training selesai.
+­ƒÅâ View run train_20260703_094809 at: http://localhost:5000/#/experiments/1/runs/f0c8e454d2264c02bd68d79c09332d24
 ­ƒº¬ View experiment at: http://localhost:5000/#/experiments/1

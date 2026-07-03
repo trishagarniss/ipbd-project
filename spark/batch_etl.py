@@ -309,6 +309,7 @@ def main():
         df_clean = clean_data(df_raw)
         df_aqi   = calculate_aqi_category(df_clean)
         df_daily = aggregate_daily(df_aqi)
+        df_daily = calculate_aqi_category(df_daily)
 
         write_to_postgres(df_daily, "daily_aqi")
         write_to_minio(spark, df_daily, tmp_dir)
