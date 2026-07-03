@@ -4,8 +4,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-docker compose exec spark-master env HOME=/tmp \
-  PYTHONPATH=/.local/lib/python3.12/site-packages \
+docker compose exec spark-master \
   spark-submit \
   --master spark://spark-master:7077 \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.7.1 \

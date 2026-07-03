@@ -81,6 +81,20 @@ CREATE TABLE IF NOT EXISTS predictions (
     created_at      TIMESTAMPTZ   DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS stream_predictions (
+    id              BIGSERIAL PRIMARY KEY,
+    station_id      VARCHAR(10)   NOT NULL,
+    window_start    TIMESTAMPTZ   NOT NULL,
+    window_end      TIMESTAMPTZ   NOT NULL,
+    pm25_avg        FLOAT,
+    pm10_avg        FLOAT,
+    ispu_avg        FLOAT,
+    predicted_label VARCHAR(20),
+    confidence      FLOAT,
+    model_version   VARCHAR(50),
+    created_at      TIMESTAMPTZ   DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS pipeline_audit (
     id          BIGSERIAL PRIMARY KEY,
     dag_id      VARCHAR(100),

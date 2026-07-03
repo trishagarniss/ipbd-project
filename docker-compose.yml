@@ -108,7 +108,9 @@ services:
       - aqi-net
 
   spark-master:
-    image: bitnamilegacy/spark:3.5.0
+    build:
+      context: ./build
+      dockerfile: Dockerfile.spark
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -117,6 +119,15 @@ services:
       - POSTGRES_DB=aqi_db
       - POSTGRES_USER=${POSTGRES_USER:-aqi_user}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password123}
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/aqi_db
+      - KAFKA_BOOTSTRAP=kafka:29092
+      - KAFKA_TOPIC=air-quality-raw
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-admin123}
+      - MLFLOW_URI=http://mlflow:5000
+      - HOME=/tmp
+      - PYTHONPATH=/home/spark/.local/lib/python3.11/site-packages
     ports:
       - "8081:8080"
       - "7077:7077"
@@ -252,13 +263,25 @@ services:
         condition: service_started
 
   spark-worker:
-    image: bitnamilegacy/spark:3.5.0
+    build:
+      context: ./build
+      dockerfile: Dockerfile.spark
     container_name: spark-worker
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/aqi_db
+      - KAFKA_BOOTSTRAP=kafka:29092
+      - KAFKA_TOPIC=air-quality-raw
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-admin123}
+      - MLFLOW_URI=http://mlflow:5000
+      - HOME=/tmp
+      - PYTHONPATH=/home/spark/.local/lib/python3.11/site-packages
     volumes:
       - ./spark:/opt/airflow/spark
+      - ./ml:/opt/airflow/ml
     networks:
       - aqi-net
     depends_on:

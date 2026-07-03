@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import argparse
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -38,14 +39,20 @@ POSTGRES_CONFIG = {
     "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
-# NOTE: di dalam container Docker, host tetap "postgres" (service name)
 
 MLFLOW_URI = os.getenv("MLFLOW_URI", "http://localhost:5000")
-MLFLOW_EXPERIMENT = "aqi-classifier"
-MODEL_NAME = "aqi-classifier"
 
 TRAIN_DAYS = 365
 TEST_DAYS  = 7
+STREAM_TRAIN_DAYS = 90
+STREAM_TEST_DAYS  = 7
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=["batch", "stream"], default="batch",
+                        help="batch: daily_aqi features (lag/rolling), stream: stream_agg features (current window)")
+    return parser.parse_args()
 
 
 def setup_logging():
@@ -54,6 +61,21 @@ def setup_logging():
         format="%(asctime)s [%(levelname)s] train - %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S"
     )
+
+
+def get_ispu_category(ispu_value):
+    if ispu_value is None or pd.isna(ispu_value):
+        return None
+    if ispu_value <= 50:
+        return "Baik"
+    elif ispu_value <= 100:
+        return "Sedang"
+    elif ispu_value <= 200:
+        return "Tidak Sehat"
+    elif ispu_value <= 300:
+        return "Sangat Tidak Sehat"
+    else:
+        return "Berbahaya"
 
 
 def load_data() -> pd.DataFrame:
@@ -75,9 +97,28 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-    log.info("Engineering features...")
+def load_stream_data() -> pd.DataFrame:
+    conn = psycopg2.connect(**POSTGRES_CONFIG)
+    query = """
+        SELECT station_id, window_start, window_end,
+            pm25_avg, pm10_avg, co_avg, no2_avg, so2_avg, o3_avg,
+            uv_index_avg, ispu_avg, temperature_avg, humidity_avg,
+            wind_speed_avg, precipitation_sum, cloud_cover_avg, record_count
+        FROM stream_agg
+        WHERE window_start >= NOW() - INTERVAL %s
+        ORDER BY station_id, window_start
+    """
+    days = STREAM_TRAIN_DAYS + STREAM_TEST_DAYS
+    df = pd.read_sql(query, conn, params=(f"{days} days",))
+    conn.close()
+    df["date"] = pd.to_datetime(df["window_start"]).dt.date
+    df["aqi_category"] = df["ispu_avg"].apply(get_ispu_category)
+    log.info("Loaded %d rows from stream_agg", len(df))
+    return df
 
+
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    log.info("Engineering batch features...")
     stations = df["station_id"].unique()
     station_encoder = LabelEncoder()
     df["station_encoded"] = station_encoder.fit_transform(df["station_id"])
@@ -114,15 +155,39 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
     df["day_of_month"] = pd.to_datetime(df["date"]).dt.day
 
-    log.info("Feature shape: %s", df.shape)
+    log.info("Batch feature shape: %s", df.shape)
+    return df
+
+
+def engineer_stream_features(df: pd.DataFrame) -> pd.DataFrame:
+    log.info("Engineering stream features...")
+    df = df.sort_values(["station_id", "window_start"]).reset_index(drop=True)
+
+    numeric_cols = [
+        "pm25_avg", "pm10_avg", "co_avg", "no2_avg", "so2_avg", "o3_avg",
+        "uv_index_avg", "ispu_avg", "temperature_avg", "humidity_avg",
+        "wind_speed_avg", "precipitation_sum", "cloud_cover_avg",
+    ]
+
+    for col in numeric_cols:
+        df[col] = df.groupby("station_id")[col].transform(
+            lambda g: g.fillna(g.rolling(7, min_periods=1).mean()).fillna(g.median())
+        )
+
+    ts = pd.to_datetime(df["window_start"])
+    df["hour_of_day"] = ts.dt.hour
+    df["day_of_week"] = ts.dt.dayofweek
+    df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
+    df["day_of_month"] = ts.dt.day
+
+    log.info("Stream feature shape: %s", df.shape)
     return df
 
 
 def prepare_train_test(df: pd.DataFrame):
     df = df.dropna(subset=["aqi_category"]).copy()
     df = df.sort_values("date").reset_index(drop=True)
-
-    max_date = df["date"].max()
+    max_date = pd.to_datetime(df["date"]).max()
     cutoff = max_date - timedelta(days=TEST_DAYS)
 
     train_df = df[df["date"] <= cutoff].copy()
@@ -131,6 +196,7 @@ def prepare_train_test(df: pd.DataFrame):
     exclude_cols = {
         "station_id", "date", "aqi_category", "station_name", "region",
         "latitude", "longitude", "created_at",
+        "window_start", "window_end",
     }
     feature_cols = [c for c in df.columns if c not in exclude_cols]
 
@@ -206,6 +272,11 @@ def train_kmeans(df: pd.DataFrame):
         "pm25_avg", "pm10_avg", "co_avg", "no2_avg", "so2_avg", "o3_avg",
         "ispu", "temperature_avg", "humidity_avg",
     ]
+    # Use available ISPU column name
+    ispu_col = "ispu" if "ispu" in df.columns else "ispu_avg"
+    if ispu_col != "ispu":
+        cluster_features[cluster_features.index("ispu")] = "ispu_avg"
+
     station_avg = df.groupby("station_id")[cluster_features].mean().dropna()
 
     scaler = StandardScaler()
@@ -245,21 +316,35 @@ def _ensure_mlflow_bucket():
 
 
 def main():
+    args = parse_args()
     setup_logging()
-    log.info("ML Training mulai...")
+
+    is_stream = args.mode == "stream"
+    experiment_name = "aqi-classifier-stream" if is_stream else "aqi-classifier"
+    model_name = "aqi-classifier-stream" if is_stream else "aqi-classifier"
+
+    log.info("ML Training (%s mode) mulai...", args.mode)
     _ensure_mlflow_bucket()
 
     mlflow.set_tracking_uri(MLFLOW_URI)
-    mlflow.set_experiment(MLFLOW_EXPERIMENT)
+    mlflow.set_experiment(experiment_name)
 
-    with mlflow.start_run(run_name=f"train_{datetime.now():%Y%m%d_%H%M%S}") as run:
+    with mlflow.start_run(run_name=f"train_{args.mode}_{datetime.now():%Y%m%d_%H%M%S}") as run:
         try:
-            df = load_data()
+            if is_stream:
+                df = load_stream_data()
+            else:
+                df = load_data()
+
             if df.empty:
                 log.warning("Data kosong, skip training.")
                 return
 
-            df_feat = engineer_features(df)
+            if is_stream:
+                df_feat = engineer_stream_features(df)
+            else:
+                df_feat = engineer_features(df)
+
             X_train, X_test, y_train, y_test, feature_cols = prepare_train_test(df_feat)
 
             if X_train.shape[0] < 10:
@@ -271,6 +356,7 @@ def main():
 
             mlflow.log_params({
                 "model_type": "RandomForestClassifier",
+                "mode": args.mode,
                 "train_samples": X_train.shape[0],
                 "test_samples": X_test.shape[0],
                 "features": len(feature_cols),
@@ -291,20 +377,21 @@ def main():
             )
 
             model_uri = f"runs:/{run.info.run_id}/model"
-            mv = mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
+            mv = mlflow.register_model(model_uri=model_uri, name=model_name)
 
             mlflow.tracking.MlflowClient().transition_model_version_stage(
-                name=MODEL_NAME, version=mv.version, stage="Production"
+                name=model_name, version=mv.version, stage="Production"
             )
             log.info("Model version %s -> stage Production", mv.version)
 
             log.info("Run ID: %s", run.info.run_id)
-            log.info("Model '%s' logged & registered ke MLflow.", MODEL_NAME)
-            log.info("ML Training selesai.")
+            log.info("Model '%s' logged & registered ke MLflow.", model_name)
+            log.info("ML Training (%s) selesai.", args.mode)
 
             summary = {
                 "run_id": run.info.run_id,
                 "model_version": mv.version,
+                "mode": args.mode,
                 "accuracy": metrics.get("accuracy"),
                 "precision": metrics.get("precision"),
                 "recall": metrics.get("recall"),

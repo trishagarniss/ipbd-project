@@ -1,9 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime
 
-import boto3
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
@@ -16,17 +14,14 @@ log = logging.getLogger(__name__)
 KAFKA_BOOTSTRAP  = os.getenv("KAFKA_BOOTSTRAP",  "kafka:29092")
 KAFKA_TOPIC      = os.getenv("KAFKA_TOPIC",      "air-quality-raw")
 
-MINIO_ENDPOINT   = os.getenv("MINIO_ENDPOINT",   "http://minio:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "admin123")
-
 POSTGRES_URL     = os.getenv("POSTGRES_URL",      "jdbc:postgresql://postgres:5432/aqi_db")
 POSTGRES_USER    = os.getenv("POSTGRES_USER",     "aqi_user")
 POSTGRES_PASS    = os.getenv("POSTGRES_PASSWORD", "password123")
 
 MLFLOW_URI       = os.getenv("MLFLOW_URI",        "http://mlflow:5000")
-MODEL_NAME       = "aqi-classifier"
-CHECKPOINT_PATH  = "/tmp/spark-checkpoints/stream_processor"
+MODEL_NAME       = "aqi-classifier-stream"
+
+CHECKPOINT_PATH  = os.getenv("CHECKPOINT_PATH",   "/tmp/spark-checkpoints/stream_processor")
 
 PAYLOAD_SCHEMA = StructType([
     StructField("station_id",               StringType(),  True),
@@ -59,6 +54,7 @@ def create_spark_session() -> SparkSession:
         SparkSession.builder
         .appName("AQI-Watch-StreamProcessor")
         .config("spark.sql.shuffle.partitions", "4")
+        .config("spark.sql.streaming.stopGracefullyOnShutdown", "true")
         .config("spark.jars.packages",
                 "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,"
                 "org.postgresql:postgresql:42.7.1")
@@ -66,57 +62,80 @@ def create_spark_session() -> SparkSession:
     )
 
 
-def load_model():
-    import mlflow.pyfunc
+def load_stream_model():
+    import mlflow.sklearn
     try:
         mlflow.set_tracking_uri(MLFLOW_URI)
-        model = mlflow.pyfunc.load_model(f"models:/{MODEL_NAME}/Production")
-        log.info("Model '%s' berhasil di-load dari MLflow.", MODEL_NAME)
+        model = mlflow.sklearn.load_model(f"models:/{MODEL_NAME}/Production")
+        log.info("Stream model '%s' Production berhasil di-load.", MODEL_NAME)
         return model
     except Exception as e:
-        log.warning("Model belum tersedia di MLflow: %s", e)
-        return None
+        log.warning("Stream model '%s' belum tersedia: %s", MODEL_NAME, e)
+        try:
+            model = mlflow.sklearn.load_model(f"models:/{MODEL_NAME}/latest")
+            log.info("Stream model '%s' latest berhasil di-load.", MODEL_NAME)
+            return model
+        except Exception as e2:
+            log.warning("Stream model gagal di-load (akan skip predictions): %s", e2)
+            return None
 
 
 def write_stream_agg_to_postgres(batch_df, batch_id: int):
-    if batch_df.count() == 0:
-        return
-    log.info("Batch %d: menulis %d baris ke stream_agg", batch_id, batch_df.count())
-    (
-        batch_df.write
-        .format("jdbc")
-        .option("url",      POSTGRES_URL)
-        .option("dbtable",  "stream_agg")
-        .option("user",     POSTGRES_USER)
-        .option("password", POSTGRES_PASS)
-        .option("driver",   "org.postgresql.Driver")
-        .mode("append")
-        .save()
-    )
-
-
-def write_predictions_to_postgres(batch_df, batch_id: int, model):
-    if model is None or batch_df.count() == 0:
-        return
-
-    import pandas as pd
-    pdf = batch_df.toPandas()
-
-    features = pdf[["pm25_avg", "pm10_avg", "co_avg", "temperature_avg", "humidity_avg"]].copy()
-    features["hour_of_day"] = datetime.now().hour
-    features["day_of_week"] = datetime.now().weekday()
-    features = features.fillna(0)
-
     try:
+        count = batch_df.count()
+        if count == 0:
+            return
+        log.info("Batch %d: menulis %d baris ke stream_agg", batch_id, count)
+        (
+            batch_df.write
+            .format("jdbc")
+            .option("url",      POSTGRES_URL)
+            .option("dbtable",  "stream_agg")
+            .option("user",     POSTGRES_USER)
+            .option("password", POSTGRES_PASS)
+            .option("driver",   "org.postgresql.Driver")
+            .mode("append")
+            .save()
+        )
+    except Exception as e:
+        log.error("Batch %d: gagal menulis ke stream_agg: %s", batch_id, e)
+
+
+def write_stream_predictions_to_postgres(batch_df, batch_id: int, model):
+    if model is None:
+        return
+    try:
+        count = batch_df.count()
+        if count == 0:
+            return
+
+        import pandas as pd
+        pdf = batch_df.toPandas()
+
+        features = pdf[[
+            "pm25_avg", "pm10_avg", "co_avg", "no2_avg", "so2_avg", "o3_avg",
+            "uv_index_avg", "ispu_avg", "temperature_avg", "humidity_avg",
+            "wind_speed_avg", "precipitation_sum", "cloud_cover_avg",
+        ]].copy()
+
+        ts = pd.to_datetime(pdf["window_start"])
+        features["hour_of_day"] = ts.dt.hour
+        features["day_of_week"] = ts.dt.dayofweek
+        features["is_weekend"] = features["day_of_week"].isin([5, 6]).astype(int)
+        features["day_of_month"] = ts.dt.day
+        features = features.fillna(0)
+
         predictions = model.predict(features)
-        pdf["predicted_label"] = predictions
-        pdf["confidence"]      = 0.85
-        pdf["model_version"]   = "Production"
+        probs = model.predict_proba(features)
+        confidences = probs.max(axis=1)
 
         result = pdf[[
-            "station_id", "window_start", "pm25_avg",
-            "pm10_avg", "predicted_label", "confidence", "model_version"
-        ]]
+            "station_id", "window_start", "window_end",
+            "pm25_avg", "pm10_avg", "ispu_avg",
+        ]].copy()
+        result["predicted_label"] = predictions
+        result["confidence"] = confidences
+        result["model_version"] = MODEL_NAME
 
         spark = SparkSession.getActiveSession()
         result_df = spark.createDataFrame(result)
@@ -125,16 +144,16 @@ def write_predictions_to_postgres(batch_df, batch_id: int, model):
             result_df.write
             .format("jdbc")
             .option("url",      POSTGRES_URL)
-            .option("dbtable",  "predictions")
+            .option("dbtable",  "stream_predictions")
             .option("user",     POSTGRES_USER)
             .option("password", POSTGRES_PASS)
             .option("driver",   "org.postgresql.Driver")
             .mode("append")
             .save()
         )
-        log.info("Batch %d: %d prediksi disimpan.", batch_id, len(result))
+        log.info("Batch %d: %d prediksi stream disimpan", batch_id, len(result))
     except Exception as e:
-        log.error("Inference gagal batch %d: %s", batch_id, e)
+        log.error("Batch %d: stream inference gagal: %s", batch_id, e)
 
 
 def main():
@@ -147,7 +166,9 @@ def main():
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
 
-    model = load_model()
+    model = load_stream_model()
+    if model is None:
+        log.warning("Stream prediction akan di-skip (model tidak tersedia)")
 
     kafka_df = (
         spark.readStream
@@ -184,7 +205,7 @@ def main():
             F.round(F.avg("so2"),                       2).alias("so2_avg"),
             F.round(F.avg("o3"),                        2).alias("o3_avg"),
             F.round(F.avg("uv_index"),                  2).alias("uv_index_avg"),
-            F.round(F.avg("ispu"),  2).alias("ispu_avg"),
+            F.round(F.avg("ispu"),                      2).alias("ispu_avg"),
             F.round(F.avg("temperature"),               2).alias("temperature_avg"),
             F.round(F.avg("humidity"),                  2).alias("humidity_avg"),
             F.round(F.avg("wind_speed"),                2).alias("wind_speed_avg"),
@@ -206,9 +227,11 @@ def main():
 
     def process_batch(batch_df, batch_id):
         batch_df.cache()
-        write_stream_agg_to_postgres(batch_df, batch_id)
-        write_predictions_to_postgres(batch_df, batch_id, model)
-        batch_df.unpersist()
+        try:
+            write_stream_agg_to_postgres(batch_df, batch_id)
+            write_stream_predictions_to_postgres(batch_df, batch_id, model)
+        finally:
+            batch_df.unpersist()
 
     query = (
         windowed_agg

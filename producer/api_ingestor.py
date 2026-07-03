@@ -1,4 +1,5 @@
 import json
+import signal
 import time
 import logging
 import sys
@@ -7,24 +8,33 @@ from pathlib import Path
 import requests
 import yaml
 from datetime import datetime, timezone
-from kafka import KafkaProducer
+from kafka import KafkaProducer, errors as kafka_errors
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "ml"))
 from ispu import compute_ispu
 
 log = logging.getLogger(__name__)
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 AQ_PARAMS = (
     "pm10,pm2_5,carbon_monoxide,"
-    "nitrogen_dioxide,sulphur_dioxide,ozone,"
-    "uv_index"
+    "nitrogen_dioxide,sulphur_dioxide,ozone"
 )
 
 WX_PARAMS = (
     "temperature_2m,relative_humidity_2m,"
     "wind_speed_10m,precipitation,precipitation_probability,"
-    "weather_code,cloud_cover"
+    "weather_code,cloud_cover,uv_index"
 )
+
+shutdown_requested = False
+
+
+def handle_signal(signum, frame):
+    global shutdown_requested
+    log.info("Shutdown signal received (%d), finishing...", signum)
+    shutdown_requested = True
 
 
 def setup_logging():
@@ -35,11 +45,18 @@ def setup_logging():
     )
 
 
-def load_locations(path="config/locations.json"):
+def load_locations():
+    path = PROJECT_ROOT / "config" / "locations.json"
     with open(path) as f:
         data = json.load(f)
     log.info("Loaded %d stations for %s", len(data["stations"]), data["city"])
     return data["stations"]
+
+
+def load_settings():
+    path = PROJECT_ROOT / "config" / "api_settings.yaml"
+    with open(path) as f:
+        return yaml.safe_load(f)
 
 
 def create_kafka_producer(settings):
@@ -53,6 +70,10 @@ def create_kafka_producer(settings):
             settings["kafka"]["bootstrap_servers"]
         )
         return producer
+    except kafka_errors.NoBrokersAvailable as e:
+        log.error("No Kafka brokers available at %s: %s",
+                  settings["kafka"]["bootstrap_servers"], e)
+        return None
     except Exception as e:
         log.error("Failed to create Kafka producer: %s", e)
         return None
@@ -82,7 +103,6 @@ def fetch_air_quality(lat, lon, base_url):
             "no2": c.get("nitrogen_dioxide"),
             "so2": c.get("sulphur_dioxide"),
             "o3": c.get("ozone"),
-            "uv_index": c.get("uv_index"),
         }
     except requests.exceptions.Timeout:
         log.warning("Air quality API timeout for (%.4f, %.4f)", lat, lon)
@@ -117,6 +137,7 @@ def fetch_weather(lat, lon, base_url):
             "precipitation_probability": c.get("precipitation_probability"),
             "weather_code": c.get("weather_code"),
             "cloud_cover": c.get("cloud_cover"),
+            "uv_index": c.get("uv_index"),
         }
     except requests.exceptions.Timeout:
         log.warning("Weather API timeout for (%.4f, %.4f)", lat, lon)
@@ -142,13 +163,15 @@ def validate_payload(payload):
         ("ispu", 0, 500),
         ("cloud_cover", 0, 100),
         ("precipitation_probability", 0, 100),
+        ("precipitation", 0, 500),
+        ("wind_speed", 0, 200),
     ]
 
     for key, lo, hi in ranges:
         val = payload.get(key)
         if val is not None and (val < lo or val > hi):
             log.warning(
-                "%s out of range [%d-%d]: %.2f for %s",
+                "%s out of range [%g-%g]: %.2f for %s",
                 key, lo, hi, val, payload["station_id"]
             )
             passes_filters = False
@@ -172,7 +195,6 @@ def build_payload(station, aq_data, wx_data):
     if aq_data:
         for key in (
             "pm25", "pm10", "co", "no2", "so2", "o3",
-            "uv_index"
         ):
             payload[key] = aq_data.get(key)
 
@@ -180,7 +202,7 @@ def build_payload(station, aq_data, wx_data):
         for key in (
             "temperature", "humidity", "wind_speed",
             "precipitation", "precipitation_probability",
-            "weather_code", "cloud_cover"
+            "weather_code", "cloud_cover", "uv_index"
         ):
             payload[key] = wx_data.get(key)
 
@@ -208,15 +230,16 @@ def format_payload_summary(payload):
 
 
 def main():
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
     setup_logging()
     log.info("=" * 50)
     log.info("AQI Watch Surakarta — API Ingestor started")
     log.info("=" * 50)
 
     locations = load_locations()
-
-    with open("config/api_settings.yaml") as f:
-        settings = yaml.safe_load(f)
+    settings = load_settings()
 
     producer = create_kafka_producer(settings)
     if producer is None:
@@ -227,59 +250,65 @@ def main():
     log.info("Poll interval: %ds | Kafka topic: %s", poll_interval, topic)
 
     cycle = 0
-    while True:
-        cycle += 1
-        log.info("--- Cycle %d ---", cycle)
+    try:
+        while not shutdown_requested:
+            cycle += 1
+            log.info("--- Cycle %d ---", cycle)
 
-        aq_url = settings["air_quality"]["base_url"] + settings["air_quality"]["endpoints"]["current"]
-        wx_url = settings["open_meteo"]["base_url"] + settings["open_meteo"]["endpoints"]["forecast"]
+            aq_url = settings["air_quality"]["base_url"] + settings["air_quality"]["endpoints"]["current"]
+            wx_url = settings["open_meteo"]["base_url"] + settings["open_meteo"]["endpoints"]["forecast"]
 
-        for station in locations:
-            try:
-                aq_data = fetch_air_quality(
-                    station["latitude"], station["longitude"], aq_url
-                )
-                wx_data = fetch_weather(
-                    station["latitude"], station["longitude"], wx_url
-                )
-
-                payload = build_payload(station, aq_data, wx_data)
-                if payload is None:
-                    log.warning(
-                        "No data for %s (%s)", station["id"], station["name"]
+            for station in locations:
+                try:
+                    aq_data = fetch_air_quality(
+                        station["latitude"], station["longitude"], aq_url
                     )
-                    continue
-
-                if not validate_payload(payload):
-                    log.warning(
-                        "Validation failed for %s — skipped", station["id"]
-                    )
-                    continue
-
-                if producer:
-                    producer.send(topic, value=payload)
-                    log.info(
-                        "[SENT] %s — %s",
-                        station["id"],
-                        format_payload_summary(payload)
-                    )
-                else:
-                    log.info(
-                        "[SIMULATED] %s — %s",
-                        station["id"],
-                        format_payload_summary(payload)
+                    wx_data = fetch_weather(
+                        station["latitude"], station["longitude"], wx_url
                     )
 
-            except Exception as e:
-                log.error(
-                    "Unexpected error for %s: %s", station["id"], e
-                )
+                    payload = build_payload(station, aq_data, wx_data)
+                    if payload is None:
+                        log.warning(
+                            "No data for %s (%s)", station["id"], station["name"]
+                        )
+                        continue
 
+                    if not validate_payload(payload):
+                        log.warning(
+                            "Validation failed for %s — skipped", station["id"]
+                        )
+                        continue
+
+                    if producer:
+                        producer.send(topic, value=payload)
+                        log.info(
+                            "[SENT] %s — %s",
+                            station["id"],
+                            format_payload_summary(payload)
+                        )
+                    else:
+                        log.info(
+                            "[SIMULATED] %s — %s",
+                            station["id"],
+                            format_payload_summary(payload)
+                        )
+
+                except Exception as e:
+                    log.error(
+                        "Unexpected error for %s: %s", station["id"], e
+                    )
+
+            if producer:
+                producer.flush()
+                log.info("All data flushed — next cycle in %ds", poll_interval)
+
+            if not shutdown_requested:
+                time.sleep(poll_interval)
+    finally:
         if producer:
-            producer.flush()
-            log.info("All data flushed — next cycle in %ds", poll_interval)
-
-        time.sleep(poll_interval)
+            producer.close()
+            log.info("Kafka producer closed.")
 
 
 if __name__ == "__main__":
