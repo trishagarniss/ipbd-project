@@ -15,8 +15,11 @@ from sklearn.metrics import (
     f1_score, classification_report, confusion_matrix
 )
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+from imblearn.over_sampling import SMOTE
 import mlflow
 import mlflow.sklearn
+import boto3
+from botocore.config import Config
 import psycopg2
 from dotenv import load_dotenv
 
@@ -32,12 +35,16 @@ POSTGRES_CONFIG = {
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
 
-MLFLOW_URI = os.getenv("MLFLOW_URI", "http://localhost:5000")
+MLFLOW_URI = os.getenv("MLFLOW_URI", "http://mlflow:5000")
+MLFLOW_EXPERIMENT = "aqi-classifier"
+MODEL_NAME = "aqi-classifier"
 
 TRAIN_DAYS = 350
 TEST_DAYS  = 7
 STREAM_TRAIN_DAYS = 90
 STREAM_TEST_DAYS  = 7
+
+AQI_CATEGORIES = ["Baik", "Sedang", "Tidak Sehat", "Sangat Tidak Sehat", "Berbahaya"]
 
 
 def parse_args():
@@ -94,7 +101,7 @@ def load_stream_data() -> pd.DataFrame:
     query = """
         SELECT station_id, window_start, window_end,
             pm25_avg, pm10_avg, co_avg, no2_avg, so2_avg, o3_avg,
-            uv_index_avg, ispu_avg, temperature_avg, humidity_avg,
+            ispu_avg, temperature_avg, humidity_avg,
             wind_speed_avg, precipitation_sum, cloud_cover_avg, record_count
         FROM stream_agg
         WHERE window_start >= NOW() - INTERVAL %s
@@ -157,7 +164,7 @@ def engineer_stream_features(df: pd.DataFrame) -> pd.DataFrame:
 
     numeric_cols = [
         "pm25_avg", "pm10_avg", "co_avg", "no2_avg", "so2_avg", "o3_avg",
-        "uv_index_avg", "ispu_avg", "temperature_avg", "humidity_avg",
+        "ispu_avg", "temperature_avg", "humidity_avg",
         "wind_speed_avg", "precipitation_sum", "cloud_cover_avg",
     ]
 
@@ -178,8 +185,9 @@ def engineer_stream_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def prepare_train_test(df: pd.DataFrame):
     df = df.dropna(subset=["aqi_category"]).copy()
+    df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
-    max_date = pd.to_datetime(df["date"]).max()
+    max_date = df["date"].max()
     cutoff = max_date - timedelta(days=TEST_DAYS)
 
     train_df = df[df["date"] <= cutoff].copy()
@@ -210,7 +218,8 @@ def train_rf(X_train, X_test, y_train, y_test, feature_cols):
     log.info("Training Random Forest classifier...")
 
     le = LabelEncoder()
-    y_train_enc = le.fit_transform(y_train)
+    le.fit(AQI_CATEGORIES)
+    y_train_enc = le.transform(y_train)
     y_test_enc  = le.transform(y_test)
 
     param_grid = {
@@ -237,7 +246,12 @@ def train_rf(X_train, X_test, y_train, y_test, feature_cols):
     log.info("RF best params: %s", grid.best_params_)
     log.info("RF accuracy: %.4f, f1: %.4f", accuracy, f1)
     log.info("Classification report:\n%s",
-             classification_report(y_test_enc, y_pred_enc, target_names=le.classes_, zero_division=0))
+             classification_report(
+                 y_test_enc, y_pred_enc,
+                 labels=list(range(len(AQI_CATEGORIES))),
+                 target_names=AQI_CATEGORIES,
+                 zero_division=0
+             ))
 
     return best_rf, le, {
         "accuracy": accuracy,
@@ -269,9 +283,33 @@ def train_kmeans(df: pd.DataFrame):
     clusters = kmeans.fit_predict(X_scaled)
 
     station_avg["cluster"] = clusters
+    cluster_counts = station_avg["cluster"].value_counts().sort_index().to_dict()
     log.info("KMeans clusters:\n%s", station_avg[["cluster"]].to_string())
 
-    return kmeans, scaler
+    return kmeans, scaler, cluster_counts
+
+
+def _ensure_mlflow_bucket():
+    endpoint = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
+    client = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+        aws_secret_access_key=os.getenv("MINIO_SECRET_KEY", "admin123"),
+        use_ssl=endpoint.startswith("https"),
+        verify=False,
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "path"},
+            retries={"max_attempts": 3, "mode": "standard"},
+        ),
+        region_name="us-east-1",
+    )
+    try:
+        client.head_bucket(Bucket="mlflow")
+    except Exception:
+        client.create_bucket(Bucket="mlflow")
+        log.info("Bucket MinIO 'mlflow' dibuat untuk artifact MLflow")
 
 
 def main():
@@ -311,7 +349,7 @@ def main():
                 return
 
             model, label_encoder, metrics = train_rf(X_train, X_test, y_train, y_test, feature_cols)
-            kmeans_model, kmeans_scaler = train_kmeans(df)
+            kmeans_model, kmeans_scaler, cluster_counts = train_kmeans(df)
 
             mlflow.log_params({
                 "model_type": "RandomForestClassifier",
@@ -333,7 +371,6 @@ def main():
             mlflow.sklearn.log_model(
                 sk_model=model,
                 artifact_path="model",
-                registered_model_name=MODEL_NAME,
             )
 
             model_uri = f"runs:/{run.info.run_id}/model"

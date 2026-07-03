@@ -22,6 +22,7 @@ MLFLOW_URI       = os.getenv("MLFLOW_URI",        "http://mlflow:5000")
 MODEL_NAME       = "aqi-classifier-stream"
 
 CHECKPOINT_PATH  = os.getenv("CHECKPOINT_PATH",   "/tmp/spark-checkpoints/stream_processor")
+CHECKPOINT_RAW   = os.getenv("CHECKPOINT_RAW",    "/tmp/spark-checkpoints/raw")
 
 PAYLOAD_SCHEMA = StructType([
     StructField("station_id",               StringType(),  True),
@@ -114,7 +115,7 @@ def write_stream_predictions_to_postgres(batch_df, batch_id: int, model):
 
         features = pdf[[
             "pm25_avg", "pm10_avg", "co_avg", "no2_avg", "so2_avg", "o3_avg",
-            "uv_index_avg", "ispu_avg", "temperature_avg", "humidity_avg",
+            "ispu_avg", "temperature_avg", "humidity_avg",
             "wind_speed_avg", "precipitation_sum", "cloud_cover_avg",
         ]].copy()
 
@@ -156,6 +157,34 @@ def write_stream_predictions_to_postgres(batch_df, batch_id: int, model):
         log.error("Batch %d: stream inference gagal: %s", batch_id, e)
 
 
+def write_raw_to_postgres(df, epoch_id):
+    try:
+        count = df.count()
+        if count == 0:
+            return
+        log.info("Epoch %d: menulis %d baris ke raw_measurements", epoch_id, count)
+        raw_df = df.select(
+            "station_id", "station_name", "region", "latitude", "longitude",
+            "timestamp",
+            "pm25", "pm10", "co", "no2", "so2", "o3",
+            "uv_index", "ispu", "ispu_category",
+            "temperature", "humidity", "wind_speed", "precipitation",
+            F.col("precipitation_probability").alias("precip_prob"),
+            "weather_code", "cloud_cover",
+        )
+        raw_df.write \
+            .format("jdbc") \
+            .option("url",      POSTGRES_URL) \
+            .option("dbtable",  "raw_measurements") \
+            .option("user",     POSTGRES_USER) \
+            .option("password", POSTGRES_PASS) \
+            .option("driver",   "org.postgresql.Driver") \
+            .mode("append") \
+            .save()
+    except Exception as e:
+        log.error("Epoch %d: gagal menulis ke raw_measurements: %s", epoch_id, e)
+
+
 def main():
     logging.basicConfig(
         level=logging.INFO,
@@ -188,11 +217,32 @@ def main():
         ).alias("data"))
         .select("data.*")
         .withColumn("event_time", F.to_timestamp("timestamp"))
-        .withWatermark("event_time", "10 minutes")
     )
 
+    # Raw data stream — tulis ke raw_measurements
+    raw_query = (
+        parsed_df
+        .select(
+            "station_id", "station_name", "region", "latitude", "longitude",
+            "timestamp",
+            "pm25", "pm10", "co", "no2", "so2", "o3",
+            "uv_index", "ispu", "ispu_category",
+            "temperature", "humidity", "wind_speed", "precipitation",
+            F.col("precipitation_probability").alias("precip_prob"),
+            "weather_code", "cloud_cover",
+        )
+        .writeStream
+        .foreachBatch(write_raw_to_postgres)
+        .option("checkpointLocation", CHECKPOINT_RAW)
+        .outputMode("append")
+        .trigger(processingTime="30 seconds")
+        .start()
+    )
+
+    # Aggregation + ML inference — tulis ke stream_agg + stream_predictions
     windowed_agg = (
         parsed_df
+        .withWatermark("event_time", "10 minutes")
         .groupBy(
             F.col("station_id"),
             F.window(F.col("event_time"), "10 minutes", "5 minutes")
@@ -204,7 +254,6 @@ def main():
             F.round(F.avg("no2"),                       2).alias("no2_avg"),
             F.round(F.avg("so2"),                       2).alias("so2_avg"),
             F.round(F.avg("o3"),                        2).alias("o3_avg"),
-            F.round(F.avg("uv_index"),                  2).alias("uv_index_avg"),
             F.round(F.avg("ispu"),                      2).alias("ispu_avg"),
             F.round(F.avg("temperature"),               2).alias("temperature_avg"),
             F.round(F.avg("humidity"),                  2).alias("humidity_avg"),
@@ -218,7 +267,7 @@ def main():
             F.col("window.start").alias("window_start"),
             F.col("window.end").alias("window_end"),
             "pm25_avg", "pm10_avg", "co_avg", "no2_avg",
-            "so2_avg", "o3_avg", "uv_index_avg",
+            "so2_avg", "o3_avg",
             "ispu_avg",
             "temperature_avg", "humidity_avg", "wind_speed_avg",
             "precipitation_sum", "cloud_cover_avg", "record_count",
@@ -233,18 +282,19 @@ def main():
         finally:
             batch_df.unpersist()
 
-    query = (
+    agg_query = (
         windowed_agg
         .writeStream
         .foreachBatch(process_batch)
-        .option("checkpointLocation", CHECKPOINT_PATH)
+        .option("checkpointLocation", f"{CHECKPOINT_PATH}/agg")
         .outputMode("update")
         .trigger(processingTime="30 seconds")
         .start()
     )
 
     log.info("Stream berjalan... tekan Ctrl+C untuk berhenti.")
-    query.awaitTermination()
+    raw_query.awaitTermination()
+    agg_query.awaitTermination()
 
 
 if __name__ == "__main__":

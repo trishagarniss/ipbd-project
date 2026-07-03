@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS stream_agg (
     no2_avg           FLOAT,
     so2_avg           FLOAT,
     o3_avg            FLOAT,
-    uv_index_avg      FLOAT,
     ispu_avg          FLOAT,
     temperature_avg   FLOAT,
     humidity_avg      FLOAT,
