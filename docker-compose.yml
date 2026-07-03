@@ -1,8 +1,6 @@
 x-airflow-common:
   &airflow-common
-  build:
-    context: ./build
-    dockerfile: Dockerfile.airflow
+  image: apache/airflow:2.7.2
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -10,21 +8,18 @@ x-airflow-common:
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__LOGGING_LEVEL: INFO
+    PIP_CONSTRAINT: "https://raw.githubusercontent.com/apache/airflow/constraints-2.7.2/constraints-3.8.txt"
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
-    MINIO_ENDPOINT: http://minio:9000
-    MLFLOW_URI: http://mlflow:5000
+    AIRFLOW_CONN_AQI_POSTGRES: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark apache-airflow-providers-telegram scikit-learn pandas numpy scipy mlflow psycopg2-binary python-dotenv boto3 requests pyspark"
   volumes:
-    - ./.env:/opt/airflow/.env
-    - ./.env:/opt/.env
-    - /var/run/docker.sock:/var/run/docker.sock:rw
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
     - ./spark:/opt/airflow/spark
     - ./ml:/opt/ml
-    - ./ml:/opt/airflow/ml
     - ./config:/opt/airflow/config
   networks:
     - aqi-net
@@ -152,9 +147,6 @@ services:
     container_name: airflow-webserver
     command: webserver
     restart: unless-stopped
-    environment:
-      <<: *airflow-common-env
-      _AIRFLOW_DB_UPGRADE: 'true'
     ports:
       - "8080:8080"
     healthcheck:
@@ -195,10 +187,8 @@ services:
     image: grafana/grafana:10.2.0
     container_name: grafana
     ports:
-      - "3001:3000"
+      - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin123
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
@@ -218,40 +208,18 @@ services:
       - aqi-net
 
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v3.8.1
+    image: ghcr.io/mlflow/mlflow:v2.8.1
     container_name: mlflow
     ports:
       - "5000:5000"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow_db
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/mlflow
       MLFLOW_DEFAULT_ARTIFACT_ROOT: s3://mlflow/
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-    command: |
-      sh -c "
-      pip install psycopg2-binary --quiet &&
-      python << 'PYEOF'
-      import psycopg2, os
-      conn = psycopg2.connect(
-          host='postgres',
-          dbname='postgres',
-          user=os.environ['POSTGRES_USER'],
-          password=os.environ['POSTGRES_PASSWORD'],
-      )
-      conn.autocommit = True
-      cur = conn.cursor()
-      cur.execute(\"SELECT 1 FROM pg_database WHERE datname = 'mlflow_db'\")
-      if not cur.fetchone():
-          cur.execute('CREATE DATABASE mlflow_db')
-          print('Created mlflow_db')
-      cur.close()
-      conn.close()
-      PYEOF
-      mlflow server --host 0.0.0.0 --port 5000 --allowed-hosts '*'
-      "
+    command: >
+      sh -c "pip install psycopg2-binary --quiet && mlflow server --host 0.0.0.0 --port 5000"
     volumes:
       - mlflow_data:/mlflow
     networks:
