@@ -75,7 +75,7 @@ def load_recent_data() -> pd.DataFrame:
             wind_speed_avg, precipitation_sum,
             cloud_cover_avg, record_count
         FROM daily_aqi
-        WHERE date >= CURRENT_DATE - INTERVAL '%d days'
+        WHERE date >= (NOW() AT TIME ZONE 'Asia/Jakarta')::date - INTERVAL '%d days'
         ORDER BY station_id, date
     """ % LOOKBACK_DAYS
     df = pd.read_sql(query, conn)
@@ -131,11 +131,14 @@ def make_prediction(model, features: pd.DataFrame):
     X = features[feature_cols].fillna(0)
 
     preds = model.predict(X)
+    probs = model.predict_proba(X)
+    confidences = probs.max(axis=1)
     log.info("Predictions: %s", preds)
-    return preds
+    log.info("Confidences: min=%.3f max=%.3f", confidences.min(), confidences.max())
+    return preds, confidences
 
 
-def save_predictions(df: pd.DataFrame, predictions):
+def save_predictions(df: pd.DataFrame, predictions, confidences):
     conn = psycopg2.connect(**POSTGRES_CONFIG)
     cursor = conn.cursor()
 
@@ -148,25 +151,31 @@ def save_predictions(df: pd.DataFrame, predictions):
             float(row.get("pm25_avg", 0) or 0),
             float(row.get("pm10_avg", 0) or 0),
             str(predictions[i]),
-            0.85,
+            float(confidences[i]),
             MODEL_NAME,
             now,
         ))
 
-    execute_values(
-        cursor,
-        """
-        INSERT INTO predictions
-            (station_id, window_start, pm25_avg, pm10_avg,
-            predicted_label, confidence, model_version, created_at)
-        VALUES %s
-        """,
-        rows,
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
-    log.info("Disimpan %d prediksi ke PostgreSQL", len(rows))
+    try:
+        execute_values(
+            cursor,
+            """
+            INSERT INTO predictions
+                (station_id, window_start, pm25_avg, pm10_avg,
+                predicted_label, confidence, model_version, created_at)
+            VALUES %s
+            """,
+            rows,
+        )
+        conn.commit()
+        log.info("Disimpan %d prediksi ke PostgreSQL", len(rows))
+    except Exception as e:
+        conn.rollback()
+        log.error("Gagal menyimpan prediksi: %s", e)
+        raise
+    finally:
+        cursor.close()
+        conn.close()
 
 
 def main():
@@ -185,8 +194,8 @@ def main():
 
     df_feat = engineer_features(df)
     latest = get_latest_per_station(df_feat)
-    preds = make_prediction(model, latest)
-    save_predictions(latest, preds)
+    preds, confidences = make_prediction(model, latest)
+    save_predictions(latest, preds, confidences)
 
     log.info("Batch Predict selesai.")
 

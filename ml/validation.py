@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import psycopg2
@@ -116,7 +116,7 @@ def validate_recent_data(conn, table: str, date_col: str = "date"):
     cursor.execute(f"SELECT MAX({date_col}) FROM {table}")
     max_date = cursor.fetchone()[0]
     if max_date:
-        days_old = (datetime.now().date() - max_date).days
+        days_old = ((datetime.now(timezone.utc) + timedelta(hours=7)).date() - max_date).days
         if days_old > 2:
             log.warning("  WARNING: data terakhir %s (%d hari yang lalu)", max_date, days_old)
         else:

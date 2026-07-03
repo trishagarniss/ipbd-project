@@ -67,7 +67,7 @@ def load_data() -> pd.DataFrame:
                 humidity_avg, wind_speed_avg, precipitation_sum,
                 cloud_cover_avg, aqi_category, record_count
         FROM daily_aqi
-        WHERE date >= CURRENT_DATE - INTERVAL %s
+        WHERE date >= (NOW() AT TIME ZONE 'Asia/Jakarta')::date - INTERVAL %s
         ORDER BY station_id, date
     """
     days = TRAIN_DAYS + TEST_DAYS
