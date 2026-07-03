@@ -3,9 +3,9 @@
 # Jalankan sekali setelah clone repo: bash setup.sh
 
 set -e
-echo "======================================"
-echo " AQI Watch Surakarta — Setup"
-echo "======================================"
+echo "============================="
+echo " AQI Watch Surakarta — Setup "
+echo "============================="
 
 # Deteksi Python interpreter (prefer uv, fallback python3/python)
 PYTHON=""
@@ -102,7 +102,7 @@ echo " MinIO Console -> http://localhost:9001"
 echo " Spark UI      -> http://localhost:8081"
 echo " Prometheus    -> http://localhost:9090"
 echo " MLflow        -> http://localhost:5000"
+echo "========================================"
 echo ""
 echo " Jalankan API Ingestor (Streaming):"
 echo " cd producer && uv pip install -r requirements.txt && $PYTHON api_ingestor.py"
-echo "========================================"

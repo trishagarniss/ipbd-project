@@ -1,10 +1,13 @@
 param(
-    [int]$Count = 3
+    [int]$Count = 3,
+    [switch]$SkipTelegram
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $logDir = "docs/logs"
 $projectRoot = Resolve-Path "$PSScriptRoot/.."
+
+$env:PYTHONIOENCODING = "utf-8"
 
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
@@ -34,9 +37,7 @@ Log "=== BATCH RUN (${Count}x ETL) ==="
 Log "Project root: $projectRoot"
 Log ""
 
-# ============================================================
 # 1. EXTRACT (1x)
-# ============================================================
 $extractLog = "$logDir/batch_extract.log"
 Log ">>> EXTRACT -> $extractLog"
 "=== EXTRACT $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $extractLog
@@ -57,15 +58,21 @@ foreach ($line in $extractLines) {
 if ($extractOk) {
     Invoke-Audit -dagId "manual_extract" -runId "extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -status SUCCESS -recordsOut $rowCount
     Log "Extract OK: $rowCount rows (${durExtract}s)"
+    if (-not $SkipTelegram) {
+        $body = "$rowCount rows | ${durExtract}s"
+        uv run python scripts/telegram_alert.py --notif "Extract" --status SUCCESS --body "$body" 2>&1 | Out-Null
+    }
 } else {
     Log "Extract FAILED"
     Invoke-Audit -dagId "manual_extract" -runId "extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')" -status FAILED
+    if (-not $SkipTelegram) {
+        $body = "${durExtract}s"
+        uv run python scripts/telegram_alert.py --notif "Extract" --status FAILED --body "$body" 2>&1 | Out-Null
+    }
 }
 Log ""
 
-# ============================================================
 # 2. ETL LOOP (Nx)
-# ============================================================
 $etlResults = @()
 
 for ($i = 1; $i -le $Count; $i++) {
@@ -76,11 +83,7 @@ for ($i = 1; $i -le $Count; $i++) {
     "=== BATCH ETL RUN #${i} $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $etlLog
 
     $t0 = Get-Date
-    docker compose exec -u root spark-master spark-submit `
-        --packages org.postgresql:postgresql:42.7.1 `
-        --conf spark.sql.ansi.enabled=false `
-        --conf spark.jars.ivy=/tmp/.ivy2 `
-        /opt/airflow/spark/batch_etl.py 2>&1 | Add-Content $etlLog
+    docker compose exec airflow-scheduler python /opt/airflow/spark/batch_etl.py 2>&1 | Add-Content $etlLog
     $t1 = Get-Date
 
     $durEtl = [math]::Round(($t1 - $t0).TotalSeconds)
@@ -110,16 +113,22 @@ for ($i = 1; $i -le $Count; $i++) {
     if ($etlOk) {
         Invoke-Audit -dagId "manual_etl" -runId $runId -status SUCCESS -recordsIn 43920 -recordsOut $inserted
         Log "ETL #${i} OK: ${inserted} inserted (${durEtl}s)"
+        if (-not $SkipTelegram) {
+            $body = "43920 -> ${inserted} rows | ${durEtl}s"
+            uv run python scripts/telegram_alert.py --notif "ETL #${i}" --status SUCCESS --body "$body" 2>&1 | Out-Null
+        }
     } else {
         Invoke-Audit -dagId "manual_etl" -runId $runId -status FAILED
         Log "ETL #${i} FAILED (${durEtl}s)"
+        if (-not $SkipTelegram) {
+            $body = "${durEtl}s"
+            uv run python scripts/telegram_alert.py --notif "ETL #${i}" --status FAILED --body "$body" 2>&1 | Out-Null
+        }
     }
     Log ""
 }
 
-# ============================================================
 # 3. RINGKASAN
-# ============================================================
 Log "============================================"
 Log "           RINGKASAN EKSEKUSI BATCH         "
 Log "============================================"

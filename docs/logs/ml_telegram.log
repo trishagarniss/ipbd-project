@@ -1,0 +1,9 @@
+=== ML TELEGRAM 2026-07-03 09:49:21 ===
+2026-07-03T09:49:23 [INFO] telegram - Telegram Alert mulai...
+D:\Kuliah\S4\project\ipbd-project\scripts\telegram_alert.py:56: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+D:\Kuliah\S4\project\ipbd-project\scripts\telegram_alert.py:69: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+2026-07-03T09:49:23 [INFO] telegram - AQI data: 5 stasiun, Predictions: 5 stasiun
+2026-07-03T09:49:24 [INFO] telegram - Telegram notif: status=200
+2026-07-03T09:49:24 [INFO] telegram - Telegram Alert selesai ÔÇö sukses

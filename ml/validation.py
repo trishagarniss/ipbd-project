@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import psycopg2
@@ -11,12 +11,13 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 log = logging.getLogger(__name__)
 
 POSTGRES_CONFIG = {
-    "host":     os.getenv("POSTGRES_HOST", "localhost"),
-    "port":     int(os.getenv("POSTGRES_PORT", 5432)),
-    "dbname":   os.getenv("POSTGRES_DB", "aqi_db"),
-    "user":     os.getenv("POSTGRES_USER", "aqi_user"),
+    "host": os.getenv("POSTGRES_HOST", "localhost"),
+    "port": int(os.getenv("POSTGRES_PORT", 5432)),
+    "dbname": os.getenv("POSTGRES_DB", "aqi_db"),
+    "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
+# NOTE: di dalam container Docker, host tetap "postgres" (service name)
 
 
 POLLUTANT_CHECKS = {
@@ -32,6 +33,13 @@ POLLUTANT_CHECKS = {
     "wind_speed": (0, 200),
     "precipitation": (0, 500),
     "cloud_cover": (0, 100),
+}
+
+DATE_COLUMNS = {
+    "raw_measurements": "timestamp",
+    "stream_agg": "window_start",
+    "daily_aqi": "date",
+    "predictions": "window_start",
 }
 
 
@@ -51,13 +59,14 @@ def validate_table(conn, table: str, date_col: str = "date"):
     row_count = cursor.fetchone()[0]
     log.info("  Row count: %d", row_count)
 
-    cursor.execute(f"SELECT COUNT(*) FROM {table} WHERE {date_col} IS NULL")
-    null_dates = cursor.fetchone()[0]
-    if null_dates > 0:
-        log.warning("  WARNING: %d null dates ditemukan!", null_dates)
+    if row_count > 0:
+        cursor.execute(f"SELECT COUNT(*) FROM {table} WHERE {date_col} IS NULL")
+        null_dates = cursor.fetchone()[0]
+        if null_dates > 0:
+            log.warning("  WARNING: %d null dates ditemukan!", null_dates)
 
     cursor.execute(f"SELECT column_name, data_type FROM information_schema.columns "
-                   f"WHERE table_name = '{table}' AND table_schema = 'public'")
+                    f"WHERE table_name = '{table}' AND table_schema = 'public'")
     cols = cursor.fetchall()
     log.info("  Columns (%d): %s", len(cols), [c[0] for c in cols])
 
@@ -74,31 +83,39 @@ def validate_table(conn, table: str, date_col: str = "date"):
 def validate_ranges(conn, table: str):
     log.info("Validating value ranges: %s", table)
     cursor = conn.cursor()
+
+    cursor.execute(f"SELECT column_name FROM information_schema.columns "
+                    f"WHERE table_name = '{table}' AND table_schema = 'public'")
+    actual_cols = {r[0] for r in cursor.fetchall()}
+
     passed = 0
     failed = 0
 
-    for col, (lo, hi) in POLLUTANT_CHECKS.items():
+    for base, (lo, hi) in POLLUTANT_CHECKS.items():
+        col = next((c for c in actual_cols if c == base or c.startswith(base + "_")), None)
+        if col is None:
+            continue
         cursor.execute(f"SELECT COUNT(*) FROM {table} "
-                       f"WHERE {col} IS NOT NULL AND ({col} < {lo} OR {col} > {hi})")
+                        f"WHERE {col} IS NOT NULL AND ({col} < {lo} OR {col} > {hi})")
         out_of_range = cursor.fetchone()[0]
         if out_of_range > 0:
-            log.warning("  WARNING: %s — %d values di luar range [%s, %s]",
-                        col, out_of_range, lo, hi)
+            log.warning("  WARNING: %s (%s) — %d values di luar range [%s, %s]",
+                        base, col, out_of_range, lo, hi)
             failed += 1
         else:
-            log.info("  OK: %s", col)
+            log.info("  OK: %s (%s)", base, col)
             passed += 1
 
     cursor.close()
     return passed, failed
 
 
-def validate_recent_data(conn, table: str):
+def validate_recent_data(conn, table: str, date_col: str = "date"):
     cursor = conn.cursor()
-    cursor.execute(f"SELECT MAX(date) FROM {table}")
+    cursor.execute(f"SELECT MAX({date_col}) FROM {table}")
     max_date = cursor.fetchone()[0]
     if max_date:
-        days_old = (datetime.now().date() - max_date).days
+        days_old = ((datetime.now(timezone.utc) + timedelta(hours=7)).date() - max_date).days
         if days_old > 2:
             log.warning("  WARNING: data terakhir %s (%d hari yang lalu)", max_date, days_old)
         else:
@@ -110,7 +127,7 @@ def validate_recent_data(conn, table: str):
 
 def main():
     setup_logging()
-    log.info("===== Data Quality Check =====")
+    log.info("Data Quality Check...")
 
     conn = psycopg2.connect(**POSTGRES_CONFIG)
 
@@ -118,18 +135,20 @@ def main():
 
     for table in tables:
         log.info("--- %s ---", table)
+        date_col = DATE_COLUMNS.get(table, "date")
         try:
-            row_count = validate_table(conn, table)
+            row_count = validate_table(conn, table, date_col)
             if row_count > 0:
                 validate_ranges(conn, table)
                 if table in ["daily_aqi", "stream_agg"]:
-                    validate_recent_data(conn, table)
+                    validate_recent_data(conn, table, date_col)
             else:
                 log.info("  (tabel kosong, skip range check)")
         except Exception as e:
             log.error("  ERROR validasi %s: %s", table, e)
+            conn.rollback()
 
-    log.info("===== Quality Check selesai =====")
+    log.info("Quality Check selesai.")
     conn.close()
 
 

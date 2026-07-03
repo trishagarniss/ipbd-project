@@ -1,8 +1,29 @@
 import os
 import sys
+import json
+import subprocess as _sp
+import importlib as _il
 import tempfile
 import logging
 from datetime import datetime
+from typing import List
+
+
+def _ensure_deps():
+    for pkg, mod_name in [
+        ("boto3", "boto3"),
+        ("psycopg2-binary", "psycopg2"),
+    ]:
+        try:
+            _il.import_module(mod_name)
+        except ImportError:
+            _sp.check_call(
+                [sys.executable, "-m", "pip", "install", pkg, "--quiet"],
+                stderr=_sp.DEVNULL,
+            )
+
+
+_ensure_deps()
 
 import boto3
 from botocore.config import Config
@@ -22,7 +43,7 @@ POSTGRES_URL  = os.getenv("POSTGRES_URL", "jdbc:postgresql://postgres:5432/aqi_d
 POSTGRES_USER = os.getenv("POSTGRES_USER", "aqi_user")
 POSTGRES_PASS = os.getenv("POSTGRES_PASSWORD", "password123")
 
-RAW_BUCKET       = "raw"
+RAW_BUCKET = "raw"
 PROCESSED_BUCKET = "processed"
 
 
@@ -74,7 +95,7 @@ def create_spark_session() -> SparkSession:
     )
 
 
-def _download_raw_csvs(spark: SparkSession, tmp_dir: str) -> list[str]:
+def _download_raw_csvs(spark: SparkSession, tmp_dir: str) -> List[str]:
     s3 = _get_minio_bucket(RAW_BUCKET)
     resp = s3.list_objects_v2(Bucket=RAW_BUCKET)
     if "Contents" not in resp:
@@ -94,27 +115,27 @@ def _download_raw_csvs(spark: SparkSession, tmp_dir: str) -> list[str]:
     return local_files
 
 
-def read_raw_csv(spark: SparkSession, input_files: list[str]):
+def read_raw_csv(spark: SparkSession, input_files: List[str]):
     schema = StructType([
-        StructField("station_id",  StringType(),  True),
+        StructField("station_id",  StringType(), True),
         StructField("station_name", StringType(), True),
-        StructField("region",      StringType(),  True),
-        StructField("latitude",    FloatType(),   True),
-        StructField("longitude",   FloatType(),   True),
-        StructField("tanggal",     StringType(),  True),
-        StructField("pm25",        FloatType(),   True),
-        StructField("pm10",        FloatType(),   True),
-        StructField("co",          FloatType(),   True),
-        StructField("no2",         FloatType(),   True),
-        StructField("so2",         FloatType(),   True),
-        StructField("o3",          FloatType(),   True),
-        StructField("ispu",          FloatType(),   True),
-        StructField("ispu_category", StringType(),  True),
-        StructField("temperature", FloatType(),   True),
-        StructField("humidity",    FloatType(),   True),
-        StructField("wind_speed",  FloatType(),   True),
+        StructField("region", StringType(), True),
+        StructField("latitude", FloatType(), True),
+        StructField("longitude", FloatType(), True),
+        StructField("tanggal", StringType(), True),
+        StructField("pm25", FloatType(), True),
+        StructField("pm10", FloatType(), True),
+        StructField("co", FloatType(), True),
+        StructField("no2", FloatType(), True),
+        StructField("so2", FloatType(), True),
+        StructField("o3", FloatType(), True),
+        StructField("ispu", FloatType(), True),
+        StructField("ispu_category", StringType(), True),
+        StructField("temperature", FloatType(), True),
+        StructField("humidity", FloatType(), True),
+        StructField("wind_speed", FloatType(), True),
         StructField("precipitation", FloatType(), True),
-        StructField("cloud_cover",  FloatType(),  True),
+        StructField("cloud_cover",  FloatType(), True),
     ])
 
     if not input_files:
@@ -148,7 +169,7 @@ def clean_data(df):
     )
     after_not_null = df.count()
     log.debug("Setelah filter null pollutants: %d -> %d (hapus %d)",
-              total_before, after_not_null, total_before - after_not_null)
+                total_before, after_not_null, total_before - after_not_null)
     if after_not_null == 0:
         log.warning("Semua baris memiliki null pada polutan — tidak ada data valid")
 
@@ -195,36 +216,35 @@ def calculate_aqi_category(df):
 def aggregate_daily(df):
     log.debug("Agregasi harian dimulai — input: %d baris", df.count())
     agg = df.groupBy("station_id", "date").agg(
-        F.round(F.avg("pm25"),         2).alias("pm25_avg"),
-        F.round(F.avg("pm10"),         2).alias("pm10_avg"),
-        F.round(F.avg("co"),           2).alias("co_avg"),
-        F.round(F.avg("no2"),          2).alias("no2_avg"),
-        F.round(F.avg("so2"),          2).alias("so2_avg"),
-        F.round(F.avg("o3"),           2).alias("o3_avg"),
-        # uv_index tidak ada di data CSV, skip
+        F.round(F.avg("pm25"), 2).alias("pm25_avg"),
+        F.round(F.avg("pm10"), 2).alias("pm10_avg"),
+        F.round(F.avg("co"), 2).alias("co_avg"),
+        F.round(F.avg("no2"), 2).alias("no2_avg"),
+        F.round(F.avg("so2"), 2).alias("so2_avg"),
+        F.round(F.avg("o3"), 2).alias("o3_avg"),
         F.round(F.avg("ispu"),  2).alias("ispu"),
-        F.round(F.avg("temperature"),  2).alias("temperature_avg"),
-        F.round(F.avg("humidity"),     2).alias("humidity_avg"),
-        F.round(F.avg("wind_speed"),   2).alias("wind_speed_avg"),
-        F.round(F.sum("precipitation"),2).alias("precipitation_sum"),
-        F.round(F.avg("cloud_cover"),  2).alias("cloud_cover_avg"),
+        F.round(F.avg("temperature"), 2).alias("temperature_avg"),
+        F.round(F.avg("humidity"), 2).alias("humidity_avg"),
+        F.round(F.avg("wind_speed"), 2).alias("wind_speed_avg"),
+        F.round(F.sum("precipitation"), 2).alias("precipitation_sum"),
+        F.round(F.avg("cloud_cover"), 2).alias("cloud_cover_avg"),
         F.first("aqi_category").alias("aqi_category"),
         F.count("*").alias("record_count"),
     )
     count = agg.count()
     log.info("Agregasi harian: %d baris", count)
     if count == 0:
-        log.warning("Agregasi harian menghasilkan 0 baris — kemungkinan data kosong")
+        log.warning("Agregasi harian menghasilkan 0 baris — kemungkinan data kosong.")
     return agg
 
 
-def write_to_postgres(df, table: str):
+def write_to_postgres(df, table: str) -> int:
     count = df.count()
     log.info("Menulis %d baris ke PostgreSQL tabel: %s", count, table)
     log.debug("Sample columns: %s", df.columns[:5])
     if count == 0:
         log.warning("Tidak ada data ditulis ke %s — tabel kosong", table)
-        return
+        return 0
 
     import psycopg2
     from psycopg2.extras import execute_values
@@ -256,14 +276,42 @@ def write_to_postgres(df, table: str):
         raise
     finally:
         conn.close()
+    return count
 
 
-def write_to_minio(spark: SparkSession, df, tmp_dir: str):
+def _cleanup_minio_prefix(s3, bucket: str, prefix: str):
+    try:
+        resp = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+        if "Contents" not in resp:
+            return
+        keys = [{"Key": obj["Key"]} for obj in resp["Contents"]]
+        while True:
+            batch = keys[:1000]
+            if not batch:
+                break
+            s3.delete_objects(Bucket=bucket, Delete={"Objects": batch})
+            keys = keys[1000:]
+            if resp.get("IsTruncated") and not keys:
+                resp = s3.list_objects_v2(Bucket=bucket, Prefix=prefix, ContinuationToken=resp.get("NextContinuationToken"))
+                if "Contents" in resp:
+                    keys = [{"Key": obj["Key"]} for obj in resp["Contents"]]
+            else:
+                break
+        log.info("Bersihkan %d file dari %s/%s", len([obj["Key"] for obj in resp.get("Contents", [])]), bucket, prefix)
+    except Exception as e:
+        log.warning("Gagal cleanup prefix %s: %s", prefix, e)
+
+
+def write_to_minio(spark: SparkSession, df, tmp_dir: str) -> int:
     count = df.count()
     log.info("Menulis %d baris ke MinIO: %s", count, tmp_dir)
     if count == 0:
         log.warning("Tidak ada data ditulis ke MinIO")
-        return
+        return 0
+
+    s3 = _get_minio_bucket(PROCESSED_BUCKET)
+    _cleanup_minio_prefix(s3, PROCESSED_BUCKET, "daily_aqi/")
+
     local_out = os.path.join(tmp_dir, "daily_aqi_output")
     (
         df.write
@@ -271,7 +319,6 @@ def write_to_minio(spark: SparkSession, df, tmp_dir: str):
         .partitionBy("station_id", "date")
         .parquet(local_out)
     )
-    s3 = _get_minio_bucket(PROCESSED_BUCKET)
     for root, _dirs, files in os.walk(local_out):
         for fname in files:
             if fname.endswith(".crc"):
@@ -285,6 +332,16 @@ def write_to_minio(spark: SparkSession, df, tmp_dir: str):
             except Exception as e:
                 log.warning("Upload warning %s: %s", s3_key, e)
     log.info("Berhasil upload daily_aqi ke MinIO")
+    return count
+
+
+def _resolve_raw_dir():
+    for i, arg in enumerate(sys.argv):
+        if arg == "--raw-dir" and i + 1 < len(sys.argv):
+            d = sys.argv[i + 1]
+            if os.path.isdir(d):
+                return d
+    return None
 
 
 def main():
@@ -294,11 +351,43 @@ def main():
         datefmt="%Y-%m-%dT%H:%M:%S"
     )
     logging.getLogger("urllib3").setLevel(logging.ERROR)
-    date_str = sys.argv[1] if len(sys.argv) > 1 else datetime.now().strftime("%Y-%m-%d")
     log.info("Batch ETL mulai...")
 
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
+
+    raw_dir = _resolve_raw_dir()
+
+    if raw_dir:
+        log.info("Membaca CSV dari direktori: %s", raw_dir)
+        input_files = sorted([
+            os.path.join(raw_dir, f)
+            for f in os.listdir(raw_dir)
+            if f.endswith(".csv")
+        ])
+        if not input_files:
+            log.warning("Tidak ada .csv di %s — ETL dihentikan", raw_dir)
+            return
+        df_raw = read_raw_csv(spark, input_files)
+        if df_raw.count() == 0:
+            log.warning("Data kosong — ETL dihentikan")
+            return
+        df_clean = clean_data(df_raw)
+        df_aqi = calculate_aqi_category(df_clean)
+        df_daily = aggregate_daily(df_aqi)
+        df_daily = calculate_aqi_category(df_daily)
+        pg_rows = write_to_postgres(df_daily, "daily_aqi")
+        log.info("Batch ETL selesai (mode Airflow).")
+
+        _m = json.dumps({
+            "csv_rows": df_raw.count(),
+            "after_clean": df_clean.count(),
+            "daily_aqi_rows": df_daily.count(),
+            "pg_rows": pg_rows,
+            "minio_rows": 0,
+        })
+        print(f"__METRICS__:{_m}")
+        return
 
     with tempfile.TemporaryDirectory(prefix="batch_etl_") as tmp_dir:
         input_files = _download_raw_csvs(spark, tmp_dir)
@@ -310,11 +399,21 @@ def main():
         df_clean = clean_data(df_raw)
         df_aqi   = calculate_aqi_category(df_clean)
         df_daily = aggregate_daily(df_aqi)
+        df_daily = calculate_aqi_category(df_daily)
 
-        write_to_postgres(df_daily, "daily_aqi")
-        write_to_minio(spark, df_daily, tmp_dir)
+        pg_rows = write_to_postgres(df_daily, "daily_aqi")
+        minio_rows = write_to_minio(spark, df_daily, tmp_dir)
 
-        log.info("Batch ETL selesai.")
+        log.info("Batch ETL selesai (standalone).")
+
+        _m = json.dumps({
+            "csv_rows": df_raw.count(),
+            "after_clean": df_clean.count(),
+            "daily_aqi_rows": df_daily.count(),
+            "pg_rows": pg_rows,
+            "minio_rows": minio_rows,
+        })
+        print(f"__METRICS__:{_m}")
 
 
 if __name__ == "__main__":
