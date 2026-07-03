@@ -261,6 +261,13 @@ def main():
 
     log.info("Batch Extract selesai — total %d rows", total_rows)
 
+    _metrics = json.dumps({
+        "total_rows": total_rows,
+        "stations": len(locations),
+        "days": args.days,
+    })
+    print(f"__METRICS__:{_metrics}")
+
 
 if __name__ == "__main__":
     main()

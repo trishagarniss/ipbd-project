@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import subprocess as _sp
 import importlib as _il
 import tempfile
@@ -237,13 +238,13 @@ def aggregate_daily(df):
     return agg
 
 
-def write_to_postgres(df, table: str):
+def write_to_postgres(df, table: str) -> int:
     count = df.count()
     log.info("Menulis %d baris ke PostgreSQL tabel: %s", count, table)
     log.debug("Sample columns: %s", df.columns[:5])
     if count == 0:
         log.warning("Tidak ada data ditulis ke %s — tabel kosong", table)
-        return
+        return 0
 
     import psycopg2
     from psycopg2.extras import execute_values
@@ -275,6 +276,7 @@ def write_to_postgres(df, table: str):
         raise
     finally:
         conn.close()
+    return count
 
 
 def _cleanup_minio_prefix(s3, bucket: str, prefix: str):
@@ -300,12 +302,12 @@ def _cleanup_minio_prefix(s3, bucket: str, prefix: str):
         log.warning("Gagal cleanup prefix %s: %s", prefix, e)
 
 
-def write_to_minio(spark: SparkSession, df, tmp_dir: str):
+def write_to_minio(spark: SparkSession, df, tmp_dir: str) -> int:
     count = df.count()
     log.info("Menulis %d baris ke MinIO: %s", count, tmp_dir)
     if count == 0:
         log.warning("Tidak ada data ditulis ke MinIO")
-        return
+        return 0
 
     s3 = _get_minio_bucket(PROCESSED_BUCKET)
     _cleanup_minio_prefix(s3, PROCESSED_BUCKET, "daily_aqi/")
@@ -330,6 +332,7 @@ def write_to_minio(spark: SparkSession, df, tmp_dir: str):
             except Exception as e:
                 log.warning("Upload warning %s: %s", s3_key, e)
     log.info("Berhasil upload daily_aqi ke MinIO")
+    return count
 
 
 def _resolve_raw_dir():
@@ -373,8 +376,17 @@ def main():
         df_aqi = calculate_aqi_category(df_clean)
         df_daily = aggregate_daily(df_aqi)
         df_daily = calculate_aqi_category(df_daily)
-        write_to_postgres(df_daily, "daily_aqi")
+        pg_rows = write_to_postgres(df_daily, "daily_aqi")
         log.info("Batch ETL selesai (mode Airflow).")
+
+        _m = json.dumps({
+            "csv_rows": df_raw.count(),
+            "after_clean": df_clean.count(),
+            "daily_aqi_rows": df_daily.count(),
+            "pg_rows": pg_rows,
+            "minio_rows": 0,
+        })
+        print(f"__METRICS__:{_m}")
         return
 
     with tempfile.TemporaryDirectory(prefix="batch_etl_") as tmp_dir:
@@ -389,10 +401,19 @@ def main():
         df_daily = aggregate_daily(df_aqi)
         df_daily = calculate_aqi_category(df_daily)
 
-        write_to_postgres(df_daily, "daily_aqi")
-        write_to_minio(spark, df_daily, tmp_dir)
+        pg_rows = write_to_postgres(df_daily, "daily_aqi")
+        minio_rows = write_to_minio(spark, df_daily, tmp_dir)
 
         log.info("Batch ETL selesai (standalone).")
+
+        _m = json.dumps({
+            "csv_rows": df_raw.count(),
+            "after_clean": df_clean.count(),
+            "daily_aqi_rows": df_daily.count(),
+            "pg_rows": pg_rows,
+            "minio_rows": minio_rows,
+        })
+        print(f"__METRICS__:{_m}")
 
 
 if __name__ == "__main__":
