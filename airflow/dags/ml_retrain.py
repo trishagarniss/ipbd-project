@@ -22,7 +22,7 @@ DEFAULT_ARGS = {
 }
 
 SCHEDULE = "0 1 * * 1"
-ML_DIR = "/opt/airflow/ml"
+ML_DIR = "/opt/ml"
 
 TELEGRAM_TOKEN  = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")

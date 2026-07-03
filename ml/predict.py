@@ -22,7 +22,7 @@ os.environ["MLFLOW_S3_ENDPOINT_URL"] = _endpoint
 log = logging.getLogger(__name__)
 
 POSTGRES_CONFIG = {
-    "host": os.getenv("POSTGRES_HOST", "localhost"),
+    "host": os.getenv("POSTGRES_HOST", "postgres"),
     "port": int(os.getenv("POSTGRES_PORT", 5432)),
     "dbname": os.getenv("POSTGRES_DB", "aqi_db"),
     "user": os.getenv("POSTGRES_USER", "aqi_user"),
@@ -30,7 +30,7 @@ POSTGRES_CONFIG = {
 }
 # NOTE: di dalam container Docker, host tetap "postgres" (service name)
 
-MLFLOW_URI   = os.getenv("MLFLOW_URI", "http://localhost:5000")
+MLFLOW_URI   = os.getenv("MLFLOW_URI", "http://mlflow:5000")
 MODEL_NAME   = "aqi-classifier"
 
 LOOKBACK_DAYS = 7

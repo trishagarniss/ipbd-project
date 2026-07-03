@@ -165,11 +165,11 @@ def write_raw_to_postgres(df, epoch_id):
         log.info("Epoch %d: menulis %d baris ke raw_measurements", epoch_id, count)
         raw_df = df.select(
             "station_id", "station_name", "region", "latitude", "longitude",
-            "timestamp",
+            F.to_timestamp("timestamp").alias("timestamp"),
             "pm25", "pm10", "co", "no2", "so2", "o3",
             "uv_index", "ispu", "ispu_category",
             "temperature", "humidity", "wind_speed", "precipitation",
-            F.col("precipitation_probability").alias("precip_prob"),
+            "precip_prob",
             "weather_code", "cloud_cover",
         )
         raw_df.write \
