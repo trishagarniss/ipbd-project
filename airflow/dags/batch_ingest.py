@@ -22,7 +22,7 @@ DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=5),
 }
 
-SCHEDULE = "30 6 * * *"
+SCHEDULE = "0 0 * * *"
 SPARK_DIR = "/opt/airflow/spark"
 
 
@@ -121,7 +121,7 @@ def _run_batch_extract(**context):
 
 
 def _download_csvs():
-    raw_dir = os.path.join(SPARK_DIR, "raw_csvs")
+    raw_dir = "/tmp/raw_csvs"
     os.makedirs(raw_dir, exist_ok=True)
 
     for f in os.listdir(raw_dir):

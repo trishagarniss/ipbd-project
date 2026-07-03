@@ -10,6 +10,7 @@ prometheus/alertmanager.yml
 data/raw/
 data/processed/
 mlruns/
+spark/raw_csvs/
 
 # Python
 __pycache__/

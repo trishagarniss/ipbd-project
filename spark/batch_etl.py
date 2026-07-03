@@ -277,12 +277,39 @@ def write_to_postgres(df, table: str):
         conn.close()
 
 
+def _cleanup_minio_prefix(s3, bucket: str, prefix: str):
+    try:
+        resp = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+        if "Contents" not in resp:
+            return
+        keys = [{"Key": obj["Key"]} for obj in resp["Contents"]]
+        while True:
+            batch = keys[:1000]
+            if not batch:
+                break
+            s3.delete_objects(Bucket=bucket, Delete={"Objects": batch})
+            keys = keys[1000:]
+            if resp.get("IsTruncated") and not keys:
+                resp = s3.list_objects_v2(Bucket=bucket, Prefix=prefix, ContinuationToken=resp.get("NextContinuationToken"))
+                if "Contents" in resp:
+                    keys = [{"Key": obj["Key"]} for obj in resp["Contents"]]
+            else:
+                break
+        log.info("Bersihkan %d file dari %s/%s", len([obj["Key"] for obj in resp.get("Contents", [])]), bucket, prefix)
+    except Exception as e:
+        log.warning("Gagal cleanup prefix %s: %s", prefix, e)
+
+
 def write_to_minio(spark: SparkSession, df, tmp_dir: str):
     count = df.count()
     log.info("Menulis %d baris ke MinIO: %s", count, tmp_dir)
     if count == 0:
         log.warning("Tidak ada data ditulis ke MinIO")
         return
+
+    s3 = _get_minio_bucket(PROCESSED_BUCKET)
+    _cleanup_minio_prefix(s3, PROCESSED_BUCKET, "daily_aqi/")
+
     local_out = os.path.join(tmp_dir, "daily_aqi_output")
     (
         df.write
@@ -290,7 +317,6 @@ def write_to_minio(spark: SparkSession, df, tmp_dir: str):
         .partitionBy("station_id", "date")
         .parquet(local_out)
     )
-    s3 = _get_minio_bucket(PROCESSED_BUCKET)
     for root, _dirs, files in os.walk(local_out):
         for fname in files:
             if fname.endswith(".crc"):
