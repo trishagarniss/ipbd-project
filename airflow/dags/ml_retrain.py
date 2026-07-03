@@ -216,7 +216,7 @@ with DAG(
     schedule=SCHEDULE,
     start_date=datetime(2025, 2, 1),
     catchup=False,
-    tags=["aqi-watch", "ml"],
+    tags=["aqi-watch", "ml", "batch"],
     on_failure_callback=_audit_failure,
 ) as dag:
 
