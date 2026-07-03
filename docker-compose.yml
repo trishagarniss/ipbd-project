@@ -239,7 +239,7 @@ services:
       cur.close()
       conn.close()
       PYEOF
-      mlflow server --host 0.0.0.0 --port 5000
+      mlflow server --host 0.0.0.0 --port 5000 --allowed-hosts '*'
       "
     volumes:
       - mlflow_data:/mlflow

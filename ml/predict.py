@@ -14,9 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-_endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
-if "minio:" in _endpoint:
-    _endpoint = _endpoint.replace("://minio:", "://localhost:")
+_endpoint = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
 os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("MINIO_SECRET_KEY", "admin123")
 os.environ["MLFLOW_S3_ENDPOINT_URL"] = _endpoint
@@ -30,8 +28,7 @@ POSTGRES_CONFIG = {
     "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
-if "postgres" in POSTGRES_CONFIG["host"]:
-    POSTGRES_CONFIG["host"] = "localhost"
+# NOTE: di dalam container Docker, host tetap "postgres" (service name)
 
 MLFLOW_URI   = os.getenv("MLFLOW_URI", "http://localhost:5000")
 MODEL_NAME   = "aqi-classifier"
@@ -119,6 +116,8 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_latest_per_station(df: pd.DataFrame):
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"])
     latest = df.loc[df.groupby("station_id")["date"].idxmax()].copy()
     log.info("Latest records: %d stations", len(latest))
     return latest

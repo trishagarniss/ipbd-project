@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -23,9 +24,7 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-_endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
-if "minio:" in _endpoint:
-    _endpoint = _endpoint.replace("://minio:", "://localhost:")
+_endpoint = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
 os.environ["AWS_ACCESS_KEY_ID"] = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 os.environ["AWS_SECRET_ACCESS_KEY"] = os.getenv("MINIO_SECRET_KEY", "admin123")
 os.environ["MLFLOW_S3_ENDPOINT_URL"] = _endpoint
@@ -39,8 +38,7 @@ POSTGRES_CONFIG = {
     "user": os.getenv("POSTGRES_USER", "aqi_user"),
     "password": os.getenv("POSTGRES_PASSWORD", "password123"),
 }
-if "postgres" in POSTGRES_CONFIG["host"]:
-    POSTGRES_CONFIG["host"] = "localhost"
+# NOTE: di dalam container Docker, host tetap "postgres" (service name)
 
 MLFLOW_URI = os.getenv("MLFLOW_URI", "http://localhost:5000")
 MLFLOW_EXPERIMENT = "aqi-classifier"
@@ -217,15 +215,14 @@ def train_kmeans(df: pd.DataFrame):
     clusters = kmeans.fit_predict(X_scaled)
 
     station_avg["cluster"] = clusters
+    cluster_counts = station_avg["cluster"].value_counts().sort_index().to_dict()
     log.info("KMeans clusters:\n%s", station_avg[["cluster"]].to_string())
 
-    return kmeans, scaler
+    return kmeans, scaler, cluster_counts
 
 
 def _ensure_mlflow_bucket():
-    endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
-    if "minio" in endpoint:
-        endpoint = endpoint.replace("://minio:", "://localhost:")
+    endpoint = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
     client = boto3.client(
         "s3",
         endpoint_url=endpoint,
@@ -270,7 +267,7 @@ def main():
                 return
 
             model, label_encoder, metrics = train_rf(X_train, X_test, y_train, y_test, feature_cols)
-            kmeans_model, kmeans_scaler = train_kmeans(df)
+            kmeans_model, kmeans_scaler, cluster_counts = train_kmeans(df)
 
             mlflow.log_params({
                 "model_type": "RandomForestClassifier",
@@ -304,6 +301,21 @@ def main():
             log.info("Run ID: %s", run.info.run_id)
             log.info("Model '%s' logged & registered ke MLflow.", MODEL_NAME)
             log.info("ML Training selesai.")
+
+            summary = {
+                "run_id": run.info.run_id,
+                "model_version": mv.version,
+                "accuracy": metrics.get("accuracy"),
+                "precision": metrics.get("precision"),
+                "recall": metrics.get("recall"),
+                "f1_score": metrics.get("f1_score"),
+                "best_params": metrics.get("best_params"),
+                "train_samples": X_train.shape[0],
+                "test_samples": X_test.shape[0],
+                "n_features": len(feature_cols),
+                "cluster_counts": cluster_counts,
+            }
+            print(f"__METRICS__:{json.dumps(summary)}")
 
         except Exception as e:
             log.error("Training gagal: %s", e)
