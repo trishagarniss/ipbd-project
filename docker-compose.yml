@@ -12,8 +12,9 @@ x-airflow-common:
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
     AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077
-    _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark apache-airflow-providers-telegram scikit-learn pandas numpy scipy mlflow psycopg2-binary python-dotenv boto3 requests pyspark"
+    _PIP_ADDITIONAL_REQUIREMENTS: ""
   volumes:
+    - ./.env:/opt/airflow/.env
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
@@ -134,6 +135,9 @@ services:
     container_name: airflow-webserver
     command: webserver
     restart: unless-stopped
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
     ports:
       - "8080:8080"
     healthcheck:
