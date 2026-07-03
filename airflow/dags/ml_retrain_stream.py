@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import logging
 import os
@@ -129,6 +129,64 @@ def _run_train_stream(**context):
     log.info("train.py (stream) selesai dalam %.2f detik.", elapsed)
 
 
+def _notify_telegram_stream(**context):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        log.warning("Telegram token/chat_id tidak dikonfigurasi — skip notifikasi")
+        return
+
+    metrics = context["ti"].xcom_pull(task_ids="ml_train_stream", key="train_metrics")
+
+    wib = datetime.now(timezone.utc) + timedelta(hours=7)
+    lines = ["\u2705 Stream ML Retrain Selesai"]
+    lines.append(f"DAG: ml_retrain_stream \u2014 {wib.strftime('%A, %d %b %Y %H:%M')} WIB")
+    lines.append("")
+
+    if metrics:
+        acc = metrics.get("accuracy", 0)
+        f1 = metrics.get("f1_score", 0)
+        prec = metrics.get("precision", 0)
+        rec = metrics.get("recall", 0)
+
+        lines.append("\U0001f4ca RandomForestClassifier (Stream)")
+        lines.append(f"\u2022 Akurasi: {acc:.4f}  |  F1: {f1:.4f}")
+        lines.append(f"\u2022 Prec: {prec:.4f}  |  Recall: {rec:.4f}")
+        lines.append("")
+
+        bp = metrics.get("best_params", "")
+        if bp:
+            import re
+            clean = re.sub(r"[{}']", "", bp).replace(", ", " | ")
+            lines.append(f"\u2699\ufe0f {clean}")
+            lines.append("")
+
+        ts = metrics.get("train_samples", 0)
+        tst = metrics.get("test_samples", 0)
+        lines.append(f"\U0001f4ca Data: {ts} train  |  {tst} test")
+        lines.append("")
+
+        cc = metrics.get("cluster_counts")
+        if cc:
+            labels = {0: "Baik", 1: "Sedang", 2: "Tidak Sehat"}
+            parts = [f"{labels.get(int(k), f'C{k}')}({v})" for k, v in sorted(cc.items())]
+            lines.append(f"\U0001f4cb Klaster: {' | '.join(parts)}")
+    else:
+        lines.append("Pipeline berjalan tanpa metrics lanjutan.")
+
+    msg = "\n".join(lines)
+    log.debug("Mengirim Telegram ke chat_id=%s, panjang pesan=%d", TELEGRAM_CHAT_ID[:4], len(msg))
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": msg},
+            timeout=10,
+        )
+        log.info("Telegram notif: status=%d", resp.status_code)
+        if resp.status_code != 200:
+            log.warning("Telegram API return non-200: %s", resp.text[:200])
+    except Exception as e:
+        log.error("Telegram notif gagal: %s", e)
+
+
 with DAG(
     dag_id="ml_retrain_stream",
     default_args=DEFAULT_ARGS,
@@ -158,4 +216,10 @@ with DAG(
         provide_context=True,
     )
 
-    audit_start >> train_stream >> audit_success
+    notify_telegram = PythonOperator(
+        task_id="notify_telegram",
+        python_callable=_notify_telegram_stream,
+        provide_context=True,
+    )
+
+    audit_start >> train_stream >> notify_telegram >> audit_success

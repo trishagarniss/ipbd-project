@@ -197,7 +197,7 @@ def main():
 
     model = load_stream_model()
     if model is None:
-        log.warning("Stream prediction akan di-skip (model tidak tersedia)")
+        log.warning("Belum ada model — akan coba ulang setiap batch hingga tersedia")
 
     kafka_df = (
         spark.readStream
@@ -275,6 +275,9 @@ def main():
     )
 
     def process_batch(batch_df, batch_id):
+        nonlocal model
+        if model is None:
+            model = load_stream_model()
         batch_df.cache()
         try:
             write_stream_agg_to_postgres(batch_df, batch_id)

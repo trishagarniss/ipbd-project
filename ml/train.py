@@ -40,8 +40,8 @@ MODEL_NAME = "aqi-classifier"
 
 TRAIN_DAYS = 350
 TEST_DAYS  = 7
-STREAM_TRAIN_DAYS = 90
-STREAM_TEST_DAYS  = 7
+STREAM_TRAIN_DAYS = 1
+STREAM_TEST_DAYS  = 1
 
 AQI_CATEGORIES = ["Baik", "Sedang", "Tidak Sehat", "Sangat Tidak Sehat", "Berbahaya"]
 
