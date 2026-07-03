@@ -87,35 +87,17 @@ def _audit_failure(context):
 def _run_batch_extract(**context):
     script = os.path.join(SPARK_DIR, "batch_extract.py")
     log.info("Running batch_extract: %s", script)
-    log.debug("Python executable: %s", sys.executable)
     t0 = time.time()
     result = subprocess.run(
         [sys.executable, script],
         capture_output=True, text=True, cwd=os.path.dirname(SPARK_DIR),
     )
     elapsed = time.time() - t0
-    log.debug("Exit code: %d, duration: %.2f detik", result.returncode, elapsed)
     log.info("stdout:\n%s", result.stdout)
     if result.returncode != 0:
         log.error("stderr:\n%s", result.stderr)
         raise RuntimeError(f"batch_extract gagal: {result.stderr}")
     log.info("batch_extract selesai dalam %.2f detik.", elapsed)
-
-
-def _run_etl(**context):
-    task = SparkSubmitOperator(
-        task_id="batch_etl_inner",
-        application=f"{SPARK_DIR}/batch_etl.py",
-        conn_id="spark_default",
-        conf={
-            "spark.sql.ansi.enabled": "false",
-            "spark.sql.shuffle.partitions": "4",
-        },
-        packages="org.postgresql:postgresql:42.7.1",
-        executor_memory="1g",
-        driver_memory="512m",
-    )
-    task.execute(context)
 
 
 with DAG(
@@ -141,10 +123,17 @@ with DAG(
         provide_context=True,
     )
 
-    etl = PythonOperator(
+    etl = SparkSubmitOperator(
         task_id="batch_etl",
-        python_callable=_run_etl,
-        provide_context=True,
+        application=f"{SPARK_DIR}/batch_etl.py",
+        conn_id="spark_default",
+        conf={
+            "spark.sql.ansi.enabled": "false",
+            "spark.sql.shuffle.partitions": "4",
+        },
+        packages="org.postgresql:postgresql:42.7.1",
+        executor_memory="1g",
+        driver_memory="512m",
     )
 
     audit_success = PythonOperator(
