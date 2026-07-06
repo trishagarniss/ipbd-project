@@ -24,14 +24,8 @@ scrape_configs:
     static_configs:
       - targets: ["kafka-exporter:9308"]
 
-  - job_name: "spark-master"
-    metrics_path: /metrics/master/prometheus
+  - job_name: "aqi-exporter"
     static_configs:
-      - targets: ["spark-master:8080"]
-
-  - job_name: "spark-worker"
-    metrics_path: /metrics/prometheus
-    static_configs:
-      - targets: ["spark-worker:8081"]
+      - targets: ["aqi-exporter:8000"]
 
 

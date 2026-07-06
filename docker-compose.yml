@@ -290,6 +290,26 @@ services:
       kafka:
         condition: service_healthy
 
+  aqi-exporter:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.aqi-exporter
+    container_name: aqi-exporter
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: aqi_db
+      POSTGRES_USER: ${POSTGRES_USER:-aqi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      COLLECTOR_INTERVAL: "15"
+    networks:
+      - aqi-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 networks:
   aqi-net:
     driver: bridge
