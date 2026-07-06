@@ -3,6 +3,7 @@ import sys
 import json
 import csv
 import io
+import socket
 import logging
 import argparse
 from datetime import datetime, timedelta, timezone
@@ -46,7 +47,13 @@ def load_locations():
 
 
 def create_minio_client():
-    ep = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
+    ep = os.getenv("MINIO_ENDPOINT")
+    if not ep:
+        try:
+            socket.gethostbyname("minio")
+            ep = "http://minio:9000"
+        except OSError:
+            ep = "http://localhost:9000"
     ak = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     sk = os.getenv("MINIO_SECRET_KEY", "admin123")
     return boto3.client(

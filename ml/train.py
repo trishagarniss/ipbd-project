@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import socket
 import argparse
 import logging
 from datetime import datetime, timedelta, timezone
@@ -288,8 +289,19 @@ def train_kmeans(df: pd.DataFrame):
     return kmeans, scaler, cluster_counts
 
 
+def _resolve_minio_endpoint() -> str:
+    env = os.getenv("MINIO_ENDPOINT")
+    if env:
+        return env
+    try:
+        socket.gethostbyname("minio")
+        return "http://minio:9000"
+    except OSError:
+        return "http://localhost:9000"
+
+
 def _ensure_mlflow_bucket():
-    endpoint = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
+    endpoint = _resolve_minio_endpoint()
     client = boto3.client(
         "s3",
         endpoint_url=endpoint,
