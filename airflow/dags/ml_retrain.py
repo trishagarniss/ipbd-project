@@ -112,6 +112,8 @@ def _run_python_script(script_name, **context):
     elapsed = time.time() - t0
     log.debug("Exit code: %d, duration: %.2f detik", result.returncode, elapsed)
     log.info("stdout:\n%s", result.stdout)
+    if result.stderr.strip():
+        log.warning("stderr:\n%s", result.stderr)
     if result.returncode != 0:
         log.error("stderr:\n%s", result.stderr)
         raise RuntimeError(f"{script_name} gagal: {result.stderr}")

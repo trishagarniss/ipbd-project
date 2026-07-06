@@ -110,6 +110,8 @@ def _run_train_stream(**context):
     )
     elapsed = time.time() - t0
     log.info("stdout:\n%s", result.stdout)
+    if result.stderr.strip():
+        log.warning("stderr:\n%s", result.stderr)
     if result.returncode != 0:
         log.error("stderr:\n%s", result.stderr)
         raise RuntimeError(f"train.py --mode stream gagal: {result.stderr}")
