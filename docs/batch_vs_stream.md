@@ -7,8 +7,8 @@ Proyek **AQI Watch Surakarta** mengimplementasikan dua paradigma utama dalam pen
 Di proyek ini, Batch Processing dikendalikan oleh **Apache Airflow** yang memicu **Apache Spark** (`batch_etl.py`).
 
 ### Karakteristik Implementasi di AQI Watch:
-*   **Frekuensi Eksekusi:** Terjadwal secara harian (pukul 06:30 pagi).
-*   **Volume Data:** Besar. Mengambil data cuaca/polusi agregat 24 jam ke belakang (atau bahkan data sebulan penuh jika dilakukan pengambilan data historis manual).
+*   **Frekuensi Eksekusi:** Terjadwal secara harian (pukul 07:00 WIB / 00:00 UTC).
+*   **Volume Data:** Besar. Mengambil data cuaca/polusi agregat 24 jam ke belakang (atau hingga 1 tahun penuh jika dilakukan pengambilan data historis manual).
 *   **Sumber Data:** REST API historis (Open-Meteo) yang merespons dengan JSON masif.
 *   **Fokus:** Pembersihan data dalam jumlah besar, validasi kualitas secara menyeluruh menggunakan **Great Expectations**, pembuatan model (ML Training), dan penyimpanan arsip jangka panjang ke format `.parquet` di **MinIO Data Lake**.
 *   **Kelebihan:** Sangat cocok untuk mengolah jutaan baris data sekaligus secara efisien; mendukung *join* dataset yang sangat kompleks dan pelatihan model ML yang menuntut komputasi berat.
@@ -21,7 +21,7 @@ Di proyek ini, aliran data *streaming* ditarik oleh producer ke **Apache Kafka**
 *   **Frekuensi Eksekusi:** Terus menerus (berjalan tanpa henti, memproses rekam data seketika ketika tersedia di Kafka).
 *   **Volume Data:** Sangat kecil per detiknya (*micro-batch*), kecepatan tinggi (data mengalir tanpa batas/tak terhingga).
 *   **Sumber Data:** Simulator Sensor (berperan layaknya perangkat IoT yang memancarkan emisi data per menit atau detik).
-*   **Fokus:** Respon yang sangat cepat. Menggunakan sistem *Tumbling Window* selama 10 menit untuk menghitung rata-rata instan. Segera setelah jendela waktu penuh, data seketika dilempar ke model Machine Learning (MLflow) untuk ditebak kategori polusinya, dan hasilnya langsung di-*push* ke PostgreSQL agar muncul di layar (dashboard Grafana).
+*   **Fokus:** Respon yang sangat cepat. Menggunakan sistem *Sliding Window* (10 menit window, 5 menit slide) untuk menghitung rata-rata instan. Segera setelah jendela waktu penuh, data seketika dilempar ke model Machine Learning (MLflow) untuk ditebak kategori polusinya, dan hasilnya langsung di-*push* ke PostgreSQL agar muncul di layar (dashboard Grafana).
 *   **Kelebihan:** Menghadirkan pengawasan (monitoring) kualitas udara secara detik-demi-detik sehingga sistem peringatan dini (Alertmanager) dapat mengirim pesan bahaya sebelum krisis/polusi memburuk secara signifikan.
 
 ## Kesimpulan

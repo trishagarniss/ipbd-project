@@ -7,7 +7,7 @@ Data mengalir dari **Open-Meteo API** → **Producer** → **Kafka** → **Spark
 ## Prasyarat
 
 - Docker Desktop (Docker Compose v2)
-- Python 3.14+ dengan `uv`
+- Python 3.11+ dengan `uv`
 - Windows 11 (atau Linux/macOS dengan penyesuaian path)
 
 ## Struktur Folder
@@ -19,7 +19,7 @@ aqi-watch-surakarta/
 ├── .gitignore
 ├── run_pipeline.sh           # E2E pipeline script
 ├── sql/
-│   └── setup.sql             # Schema PostgreSQL (5 tabel)
+│   └── setup.sql             # Schema PostgreSQL (6 tabel)
 ├── config/
 │   ├── locations.json        # 5 stasiun Surakarta (SKA1–SKA5)
 │   └── api_settings.yaml     # Konfigurasi API & Kafka
@@ -32,8 +32,9 @@ aqi-watch-surakarta/
 │   └── api_ingestor.py       # API → Kafka (streaming real-time)
 ├── airflow/
 │   └── dags/
-│       ├── batch_ingest.py   # DAG harian (extract → ETL) + audit
-│       └── ml_retrain.py     # DAG mingguan + Telegram notif
+│       ├── batch_ingest.py       # DAG harian (extract → ETL) + audit
+│       ├── ml_retrain.py         # DAG mingguan + Telegram notif
+│       └── ml_retrain_stream.py  # DAG harian stream ML retrain
 ├── ml/
 │   ├── ispu.py               # Perhitungan ISPU (Permen LHK No.14/2020)
 │   ├── train.py              # Random Forest + KMeans → MLflow
@@ -41,19 +42,27 @@ aqi-watch-surakarta/
 │   ├── validation.py         # Data quality check
 │   └── requirements.txt
 ├── scripts/
-│   └── generate_configs.py   # Generate konfigurasi dari .env
+│   ├── generate_configs.py   # Generate konfigurasi dari .env
+│   ├── run_ml.ps1            # Manual ML pipeline (PowerShell)
+│   ├── run_batch.ps1         # Manual batch ETL (PowerShell)
+│   └── telegram_alert.py     # Kirim notifikasi AQI via Telegram
 ├── prometheus/
 │   ├── prometheus.yml        # Scrape config
 │   ├── alertmanager.yml.tmpl # Template Telegram alert
+│   ├── aqi_exporter.py       # Custom Prometheus exporter
 │   └── rules/aqi_alerts.yml  # 5 alert rules
 ├── grafana/
-│   ├── datasources/          # Auto-provisioning PostgreSQL
-│   └── dashboards/           # Auto-provisioning dashboard ISPU
+│   ├── datasources/                  # Auto-provisioning PostgreSQL
+│   └── dashboards/                   # Auto-provisioning dashboard ISPU
+│       └── air-quality-surakarta.json
 └── docs/
-    ├── metadata.md           # Metadata 5 tabel database
-    ├── run-demo.md           # Tutorial demo end-to-end
-    ├── dashboard.md          # Tujuan & insight dashboard
-    └── troubleshooting.md    # Common issues
+    ├── architecture.md        # Arsitektur pipeline
+    ├── metadata.md            # Metadata 6 tabel database
+    ├── run-demo.md            # Tutorial demo end-to-end
+    ├── dashboard.md           # Tujuan & insight dashboard
+    ├── batch_vs_stream.md     # Perbandingan batch vs stream
+    ├── security_measures.md   # Keamanan & governance
+    └── troubleshooting.md     # Common issues
 ```
 
 ## Cara Menjalankan
@@ -82,7 +91,7 @@ uv run python spark/batch_extract.py
 
 # ETL ke daily_aqi (Spark)
 docker compose exec spark-master env HOME=/tmp \
-  PYTHONPATH=/.local/lib/python3.12/site-packages \
+  PYTHONPATH=/.local/lib/python3.11/site-packages \
   spark-submit --packages org.postgresql:postgresql:42.7.1 \
   --conf spark.sql.ansi.enabled=false \
   /opt/airflow/spark/batch_etl.py
@@ -111,7 +120,7 @@ bash spark/submit_streaming.sh
 
 ### 5. Scheduling (Airflow)
 
-DAG `batch_ingest` jalan setiap hari 06:30 WIB.
+DAG `batch_ingest` jalan setiap hari 07:00 WIB (00:00 UTC).
 DAG `ml_retrain` jalan setiap Senin 08:00 WIB + notif Telegram.
 
 ## Akses Service

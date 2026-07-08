@@ -51,7 +51,6 @@ Agregasi window 10 menit (slide 5 menit) dari Spark Structured Streaming.
 | no2_avg           | FLOAT          | Rata-rata NO2                      |
 | so2_avg           | FLOAT          | Rata-rata SO2                      |
 | o3_avg            | FLOAT          | Rata-rata O3                       |
-| uv_index_avg      | FLOAT          | Rata-rata UV Index                 |
 | ispu_avg          | FLOAT          | Rata-rata ISPU                     |
 | temperature_avg   | FLOAT          | Rata-rata suhu                     |
 | humidity_avg      | FLOAT          | Rata-rata kelembaban               |
@@ -79,7 +78,6 @@ Agregasi harian dari batch ETL. Sumber data truth untuk ML training.
 | no2_avg           | FLOAT          | Rata-rata NO2                      |
 | so2_avg           | FLOAT          | Rata-rata SO2                      |
 | o3_avg            | FLOAT          | Rata-rata O3                       |
-| uv_index_avg      | FLOAT          | Rata-rata UV Index                 |
 | ispu              | FLOAT          | Rata-rata ISPU                     |
 | temperature_avg   | FLOAT          | Rata-rata suhu                     |
 | humidity_avg      | FLOAT          | Rata-rata kelembaban               |
@@ -95,7 +93,7 @@ Agregasi harian dari batch ETL. Sumber data truth untuk ML training.
 **Penggunaan:** ML training, dashboard harian
 
 ### 4. `predictions`
-Hasil prediksi ML (dari stream processor & batch predict).
+Hasil prediksi ML batch (dari batch predict).
 
 | Kolom           | Tipe           | Deskripsi                          |
 |-----------------|----------------|-------------------------------------|
@@ -109,10 +107,30 @@ Hasil prediksi ML (dari stream processor & batch predict).
 | model_version   | VARCHAR(50)    | Versi model ML                     |
 | created_at      | TIMESTAMPTZ    | Waktu insert                       |
 
-**Sumber:** Spark Structured Streaming + MLflow model  
-**Frekuensi:** Real-time (setiap window 10 menit) + batch harian
+**Sumber:** Batch predict (`ml/predict.py`)  
+**Frekuensi:** Harian (setelah ML retrain)
 
-### 5. `pipeline_audit`
+### 5. `stream_predictions`
+Hasil prediksi ML streaming real-time dari Spark Structured Streaming.
+
+| Kolom           | Tipe           | Deskripsi                          |
+|-----------------|----------------|-------------------------------------|
+| id              | BIGSERIAL (PK) | Auto-increment                     |
+| station_id      | VARCHAR(10)    | Kode stasiun                       |
+| window_start    | TIMESTAMPTZ    | Awal window                        |
+| window_end      | TIMESTAMPTZ    | Akhir window                       |
+| pm25_avg        | FLOAT          | Rata-rata PM2.5                    |
+| pm10_avg        | FLOAT          | Rata-rata PM10                     |
+| ispu_avg        | FLOAT          | Rata-rata ISPU                     |
+| predicted_label | VARCHAR(20)    | Label kualitas udara               |
+| confidence      | FLOAT          | Confidence score (0–1)             |
+| model_version   | VARCHAR(50)    | Versi model ML                     |
+| created_at      | TIMESTAMPTZ    | Waktu insert                       |
+
+**Sumber:** Spark Structured Streaming + MLflow model  
+**Frekuensi:** Real-time (setiap window 10 menit)
+
+### 6. `pipeline_audit`
 Log eksekusi pipeline Airflow untuk traceability.
 
 | Kolom       | Tipe           | Deskripsi                          |

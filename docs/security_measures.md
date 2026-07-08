@@ -26,10 +26,11 @@ Akses *dashboard* monitoring dan manajemen publik dikunci rapat melalui metode o
 Data Governance diterapkan agar keakuratan dan kelengkapan data dapat diaudit sewaktu-waktu (Audit Trail) dan memenuhi standar kontrol kualitas sebelum diproses.
 
 ### A. Data Quality Monitoring (Validasi Otomatis)
-Kami secara ketat menggunakan alat standar industri, **Great Expectations**, di dalam alur *Airflow DAG* kami (`dags/batch_ingest.py`). Sebelum pipeline ETL Spark menyimpan rekam data ke dalam Data Warehouse, _Expectation Suite_ akan melakukan pemindaian otomatis, contohnya:
-* Memastikan nilai Kolom (seperti PM2.5 dan PM10) tidak boleh `Null` atau negatif.
-* Memastikan bahwa partikel polusi tidak melebihi rentang wajar atmosferik.
-Jika kondisi/ekspektasi ini gagal, pipeline akan menghentikan alur (*failing the task*) sehingga data kotor tidak mencemari model Machine Learning maupun hasil akhir laporan (*Dashboard*).
+Validasi data dilakukan di beberapa tahap pipeline secara otomatis:
+* **Range Validation** di Spark ETL: Memfilter nilai PM2.5, PM10, dan polutan lainnya yang berada di luar rentang wajar atau negatif sebelum disimpan ke Data Warehouse.
+* **Null Filtering**: Baris dengan nilai NULL pada kolom kritis (station_id, timestamp) otomatis dibuang.
+* **Great Expectations** (standalone): Validasi data quality tambahan dapat dijalankan secara manual menggunakan *Expectation Suite* untuk memeriksa anomali lebih lanjut.
+* **Data Quality Check di ML Pipeline**: Script `ml/validation.py` mengecek kelengkapan data (row counts, distinct stations, recency, range validation) dari 4 tabel utama sebelum training.
 
 ### B. Audit Trail Pipeline
 Setiap kali operasi ETL *Batch* harian berjalan, baik melalui script mandiri (`run_batch.ps1`) maupun Airflow DAG, operasi sisip (insert) log otomatis dikirimkan ke tabel PostgreSQL `pipeline_audit`. Tabel ini mencatat:

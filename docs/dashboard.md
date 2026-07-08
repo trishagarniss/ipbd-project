@@ -62,9 +62,9 @@ Dashboard ini dirancang untuk tiga peran utama:
 |------|-----------|----------|-------|
 | ISPU Kritis | ispu_avg > 200 (30 menit) | critical | Telegram |
 | ISPU Warning | ispu_avg > 100 (1 jam) | warning | Telegram |
-| PM2.5 Tinggi | pm25_avg > 50 (1 jam) | warning | Telegram |
-| Kafka Down | up == 0 (2 menit) | critical | Telegram |
-| PostgreSQL Down | up == 0 (2 menit) | critical | Telegram |
+| PM2.5 Tinggi | pm25_avg > 55.4 (1 jam) | warning | Telegram |
+| Kafka Down | up{job="kafka-exporter"} == 0 (2 menit) | critical | Telegram |
+| PostgreSQL Down | up{job="postgres-exporter"} == 0 (2 menit) | critical | Telegram |
 
 ## Batasan & Asumsi
 

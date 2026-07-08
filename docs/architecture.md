@@ -27,7 +27,7 @@ graph TD
 
     %% Processing Layer (Apache Spark)
     subgraph Processing Layer
-        SparkBatch[Spark Batch ETL\n- Data Cleaning\n- Great Expectations Validation]:::process
+        SparkBatch[Spark Batch ETL\n- Data Cleaning\n- Range Validation]:::process
         SparkStream[Spark Structured Streaming\n- 10min Tumbling Window\n- ML Inference]:::process
         MLTrain[MLflow Training Job\n- Random Forest Classifier]:::process
     end
@@ -47,7 +47,7 @@ graph TD
     end
 
     %% Flow: Batch
-    API -->|Fetch 30-day History| AF_DAG
+    API -->|Fetch 1-year Historical| AF_DAG
     AF_DAG -->|Raw Data| MinIO
     AF_DAG -->|Trigger| SparkBatch
     SparkBatch -->|Clean & Aggregate| Postgres
@@ -78,12 +78,12 @@ graph TD
 * **Sensor Simulator (`api_ingestor.py`)**: Script Python yang meniru perilaku perangkat IoT dengan menarik data *real-time* terkini lalu didorong ke dalam sistem _message broker_.
 
 ### 2. Ingestion & Message Broker
-* **Apache Airflow**: Berperan sebagai _orchestrator_ utama. Bertugas menjadwalkan pengambilan data historis tiap pagi (06:30) serta melatih ulang model Machine Learning setiap minggunya.
+* **Apache Airflow**: Berperan sebagai _orchestrator_ utama. Bertugas menjadwalkan pengambilan data historis tiap pagi (07:00 WIB) serta melatih ulang model Machine Learning setiap minggunya.
 * **Apache Kafka**: Berfungsi sebagai penyangga (_buffer_) sekaligus sistem perpesanan publikasi-berlangganan (pub/sub). Kafka menerima ribuan data *real-time* dari sensor tanpa membebani sistem pemrosesan di belakangnya, sehingga menjamin toleransi kesalahan (_fault tolerance_).
 
 ### 3. Processing Layer (Pemrosesan Data)
 Layer ini ditenagai oleh **Apache Spark**:
-* **Spark Batch ETL**: Memproses data harian yang diunduh dari Open-Meteo. Melakukan validasi kualitas data menggunakan **Great Expectations** untuk memastikan tidak ada anomali (misalnya rentang PM2.5 yang tidak masuk akal) sebelum menyimpan data bersih.
+* **Spark Batch ETL**: Memproses data harian yang diunduh dari Open-Meteo. Melakukan validasi kualitas data (range validation, null filtering) untuk memastikan tidak ada anomali (misalnya rentang PM2.5 yang tidak masuk akal) sebelum menyimpan data bersih.
 * **Spark Structured Streaming**: Membaca rentetan data *real-time* dari Kafka, lalu mengelompokkannya (_windowing_) per 10 menit. Di saat yang sama, Spark Streaming menggunakan model ML yang ada untuk memprediksi kategori ISPU (Baik, Sedang, Tidak Sehat) *on-the-fly*.
 * **MLflow Training Job**: Menggunakan *Random Forest Classifier* (Scikit-Learn) untuk mempelajari pola cuaca historis dalam menentukan indeks polusi udara.
 

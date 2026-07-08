@@ -2,7 +2,7 @@
 
 ## Prasyarat
 - Docker Desktop terinstall dan running
-- Python 3.14+ dengan uv
+- Python 3.11+ dengan uv
 - Semua file source code sudah lengkap
 
 ## 1. Jalankan Infrastruktur
@@ -106,7 +106,7 @@ docker compose exec postgres psql -U aqi_user -d aqi_db -c \
 
 1. Buka http://localhost:3000 (admin/admin123)
 2. Add data source → PostgreSQL
-3. Host: `postgres:5432`, Database: `aqi_db`, User: `aqi_user`, Password: `aqi_password_123`
+3. Host: `postgres:5432`, Database: `aqi_db`, User: `aqi_user`, Password: `password123`
 4. Import dashboard dari `grafana/dashboards/`
 5. Buat panel:
    - **Time series:** ISPU per stasiun (dari `stream_agg`)
@@ -128,7 +128,7 @@ docker compose exec postgres psql -U aqi_user -d aqi_db -c \
 
 ### Aktifkan DAG
 1. Buka http://localhost:8080 (admin/admin123)
-2. Aktifkan DAG `batch_ingest` → schedule setiap hari 06:30
+2. Aktifkan DAG `batch_ingest` → schedule setiap hari 07:00 WIB (00:00 UTC)
 3. Aktifkan DAG `ml_retrain` → schedule setiap Senin 08:00
 
 ### Trigger Manual
